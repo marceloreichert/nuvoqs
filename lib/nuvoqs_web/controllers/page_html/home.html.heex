@@ -467,11 +467,24 @@
       </div>
     </div>
     <ul class="nav-links">
-      <li><a href="#features">Recursos</a></li>
-      <li><a href="#code">Código</a></li>
-      <li><a href="https://hexdocs.pm/phoenix_live_view" target="_blank">Docs</a></li>
-      <li><a href="#" target="_blank">GitHub</a></li>
-      <li><a href="#install" class="nav-cta">Começar</a></li>
+      <%= if @current_scope do %>
+        <li>
+          {@current_scope.user.email}
+        </li>
+        <li>
+          <.link href={~p"/users/settings"}>Settings</.link>
+        </li>
+        <li>
+          <.link href={~p"/users/log-out"} method="delete">Log out</.link>
+        </li>
+      <% else %>
+        <li>
+          <.link href={~p"/users/register"} class="nav-cta">Register</.link>
+        </li>
+        <li>
+          <.link href={~p"/users/log-in"} class="nav-cta">Log in</.link>
+        </li>
+      <% end %>
     </ul>
   </nav>
 

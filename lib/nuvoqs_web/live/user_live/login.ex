@@ -6,33 +6,253 @@ defmodule NuvoqsWeb.UserLive.Login do
   @impl true
   def render(assigns) do
     ~H"""
-    <Layouts.app flash={@flash} current_scope={@current_scope}>
-      <div class="mx-auto max-w-sm space-y-4">
-        <div class="text-center">
-          <.header>
-            <p>Log in</p>
-            <:subtitle>
-              <%= if @current_scope do %>
-                You need to reauthenticate to perform sensitive actions on your account.
-              <% else %>
-                Don't have an account? <.link
-                  navigate={~p"/users/register"}
-                  class="font-semibold text-brand hover:underline"
-                  phx-no-format
-                >Sign up</.link> for an account now.
-              <% end %>
-            </:subtitle>
-          </.header>
-        </div>
+    <Layouts.flash_group flash={@flash} />
 
-        <div :if={local_mail_adapter?()} class="alert alert-info">
-          <.icon name="hero-information-circle" class="size-6 shrink-0" />
-          <div>
-            <p>You are running the local mail adapter.</p>
-            <p>
-              To see sent emails, visit <.link href="/dev/mailbox" class="underline">the mailbox page</.link>.
-            </p>
-          </div>
+    <style>
+      :root {
+        --orange-deep: #b45309;
+        --orange-brand: #d97706;
+        --orange-bright: #f59e0b;
+        --orange-light: #fbbf24;
+        --gold: #f5c542;
+        --surface: #1a0f00;
+        --text-primary: #fef7ed;
+        --text-muted: #c9a76c;
+        --code-bg: #1f1409;
+        --card-bg: rgba(217, 119, 6, 0.08);
+        --card-border: rgba(245, 158, 11, 0.2);
+      }
+
+      body {
+        background: var(--surface);
+        color: var(--text-primary);
+        font-family: 'Sora', sans-serif;
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      .reg-bg-grid {
+        position: fixed;
+        inset: 0;
+        z-index: 0;
+        background-image:
+          linear-gradient(rgba(245, 158, 11, 0.035) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(245, 158, 11, 0.035) 1px, transparent 1px);
+        background-size: 60px 60px;
+      }
+
+      .reg-orb {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(120px);
+        z-index: 0;
+        pointer-events: none;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(245, 158, 11, 0.15), transparent 70%);
+        top: -80px;
+        right: -80px;
+      }
+
+      .reg-wrapper {
+        position: relative;
+        z-index: 1;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 24px;
+      }
+
+      .reg-card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 20px;
+        padding: 48px 40px;
+        width: 100%;
+        max-width: 440px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        animation: fadeUp 0.7s ease-out both;
+      }
+
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      .reg-logo {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        display: block;
+        margin: 0 auto 24px;
+        box-shadow: 0 0 30px rgba(245, 158, 11, 0.3);
+      }
+
+      .reg-title {
+        font-size: 1.75rem;
+        font-weight: 800;
+        letter-spacing: -1px;
+        text-align: center;
+        margin-bottom: 8px;
+        background: linear-gradient(135deg, var(--orange-light), var(--gold));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .reg-subtitle {
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.9rem;
+        margin-bottom: 28px;
+      }
+
+      .reg-subtitle a {
+        color: var(--orange-light);
+        text-decoration: none;
+        font-weight: 600;
+      }
+
+      .reg-subtitle a:hover { text-decoration: underline; }
+
+      .reg-card label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--text-muted) !important;
+        margin-bottom: 6px;
+      }
+
+      .reg-card input[type="email"],
+      .reg-card input[type="text"],
+      .reg-card input[type="password"] {
+        width: 100%;
+        background: var(--code-bg) !important;
+        border: 1px solid var(--card-border) !important;
+        border-radius: 10px !important;
+        color: var(--text-primary) !important;
+        padding: 12px 16px !important;
+        font-size: 0.95rem;
+        font-family: 'Sora', sans-serif;
+        outline: none;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        box-shadow: none !important;
+      }
+
+      .reg-card input:focus {
+        border-color: var(--orange-brand) !important;
+        box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15) !important;
+      }
+
+      .reg-card [phx-feedback-for] { margin-bottom: 16px; }
+
+      .reg-submit {
+        width: 100%;
+        margin-top: 4px;
+        background: linear-gradient(135deg, var(--orange-brand), var(--orange-deep));
+        color: #fff;
+        border: none;
+        border-radius: 10px;
+        padding: 13px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: 'Sora', sans-serif;
+        transition: transform 0.2s, box-shadow 0.3s;
+        box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3);
+      }
+
+      .reg-submit:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 30px rgba(245, 158, 11, 0.5);
+      }
+
+      .reg-submit-soft {
+        width: 100%;
+        margin-top: 8px;
+        background: rgba(217, 119, 6, 0.1);
+        color: var(--orange-light);
+        border: 1px solid var(--card-border);
+        border-radius: 10px;
+        padding: 13px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        font-family: 'Sora', sans-serif;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .reg-submit-soft:hover {
+        background: rgba(217, 119, 6, 0.2);
+        border-color: var(--orange-bright);
+      }
+
+      .login-divider {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 24px 0;
+        color: var(--text-muted);
+        font-size: 0.82rem;
+      }
+
+      .login-divider::before,
+      .login-divider::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: var(--card-border);
+      }
+
+      .login-alert {
+        background: rgba(45, 212, 191, 0.08);
+        border: 1px solid rgba(45, 212, 191, 0.2);
+        border-radius: 10px;
+        padding: 14px 16px;
+        font-size: 0.85rem;
+        color: #5eead4;
+        margin-bottom: 20px;
+        line-height: 1.5;
+      }
+
+      .login-alert a {
+        color: #2dd4bf;
+        text-decoration: underline;
+      }
+
+      .reg-back {
+        display: block;
+        text-align: center;
+        margin-top: 24px;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        text-decoration: none;
+      }
+
+      .reg-back:hover { color: var(--text-primary); }
+    </style>
+
+    <div class="reg-bg-grid"></div>
+    <div class="reg-orb"></div>
+
+    <div class="reg-wrapper">
+      <div class="reg-card">
+        <img src="/images/A_Nova_Voz.png" alt="NuvoQS" class="reg-logo" />
+        <h1 class="reg-title">Entrar</h1>
+        <p class="reg-subtitle">
+          <%= if @current_scope do %>
+            Confirme sua identidade para continuar.
+          <% else %>
+            Não tem uma conta?
+            <.link navigate={~p"/users/register"}>Criar conta</.link>
+          <% end %>
+        </p>
+
+        <div :if={local_mail_adapter?()} class="login-alert">
+          Você está usando o adaptador de e-mail local.
+          Veja os e-mails enviados em
+          <.link href="/dev/mailbox">Mailbox</.link>.
         </div>
 
         <.form
@@ -52,12 +272,12 @@ defmodule NuvoqsWeb.UserLive.Login do
             required
             phx-mounted={JS.focus()}
           />
-          <.button class="btn btn-primary w-full">
-            Log in with email <span aria-hidden="true">→</span>
-          </.button>
+          <button type="submit" class="reg-submit">
+            Entrar com link por e-mail →
+          </button>
         </.form>
 
-        <div class="divider">or</div>
+        <div class="login-divider">ou</div>
 
         <.form
           :let={f}
@@ -79,19 +299,26 @@ defmodule NuvoqsWeb.UserLive.Login do
           <.input
             field={@form[:password]}
             type="password"
-            label="Password"
+            label="Senha"
             autocomplete="current-password"
             spellcheck="false"
           />
-          <.button class="btn btn-primary w-full" name={@form[:remember_me].name} value="true">
-            Log in and stay logged in <span aria-hidden="true">→</span>
-          </.button>
-          <.button class="btn btn-primary btn-soft w-full mt-2">
-            Log in only this time
-          </.button>
+          <button
+            type="submit"
+            class="reg-submit"
+            name={@form[:remember_me].name}
+            value="true"
+          >
+            Entrar e permanecer logado →
+          </button>
+          <button type="submit" class="reg-submit-soft">
+            Entrar apenas desta vez
+          </button>
         </.form>
+
+        <.link navigate={~p"/"} class="reg-back">← Voltar ao início</.link>
       </div>
-    </Layouts.app>
+    </div>
     """
   end
 
