@@ -1,5 +1,5 @@
-defmodule nuvoQsWeb.PageControllerTest do
-  use nuvoQsWeb.ConnCase
+defmodule NuvoqsWeb.PageControllerTest do
+  use NuvoqsWeb.ConnCase
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")

@@ -1,4 +1,4 @@
-defmodule nuvoQsWeb.CoreComponents do
+defmodule NuvoqsWeb.CoreComponents do
   @moduledoc """
   Provides core UI components.
 
@@ -27,7 +27,7 @@ defmodule nuvoQsWeb.CoreComponents do
 
   """
   use Phoenix.Component
-  use Gettext, backend: nuvoQsWeb.Gettext
+  use Gettext, backend: NuvoqsWeb.Gettext
 
   alias Phoenix.LiveView.JS
 
@@ -457,9 +457,9 @@ defmodule nuvoQsWeb.CoreComponents do
     # with our gettext backend as first argument. Translations are
     # available in the errors.po file (as we use the "errors" domain).
     if count = opts[:count] do
-      Gettext.dngettext(nuvoQsWeb.Gettext, "errors", msg, msg, count, opts)
+      Gettext.dngettext(NuvoqsWeb.Gettext, "errors", msg, msg, count, opts)
     else
-      Gettext.dgettext(nuvoQsWeb.Gettext, "errors", msg, opts)
+      Gettext.dgettext(NuvoqsWeb.Gettext, "errors", msg, opts)
     end
   end
 

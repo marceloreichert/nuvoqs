@@ -7,19 +7,32 @@
 # General application configuration
 import Config
 
-config :nuvoQs,
-  ecto_repos: [nuvoQs.Repo],
+config :nuvoqs, :scopes,
+  user: [
+    default: true,
+    module: Nuvoqs.Accounts.Scope,
+    assign_key: :current_scope,
+    access_path: [:user, :id],
+    schema_key: :user_id,
+    schema_type: :id,
+    schema_table: :users,
+    test_data_fixture: Nuvoqs.AccountsFixtures,
+    test_setup_helper: :register_and_log_in_user
+  ]
+
+config :nuvoqs,
+  ecto_repos: [Nuvoqs.Repo],
   generators: [timestamp_type: :utc_datetime]
 
 # Configures the endpoint
-config :nuvoQs, nuvoQsWeb.Endpoint,
+config :nuvoqs, NuvoqsWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [html: nuvoQsWeb.ErrorHTML, json: nuvoQsWeb.ErrorJSON],
+    formats: [html: NuvoqsWeb.ErrorHTML, json: NuvoqsWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: nuvoQs.PubSub,
+  pubsub_server: Nuvoqs.PubSub,
   live_view: [signing_salt: "IIOPZlYJ"]
 
 # Configures the mailer
@@ -29,7 +42,7 @@ config :nuvoQs, nuvoQsWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :nuvoQs, nuvoQs.Mailer, adapter: Swoosh.Adapters.Local
+config :nuvoqs, Nuvoqs.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,

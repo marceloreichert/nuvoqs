@@ -1,9 +1,9 @@
-defmodule nuvoQsWeb.Layouts do
+defmodule NuvoqsWeb.Layouts do
   @moduledoc """
   This module holds layouts and related functionality
   used by your application.
   """
-  use nuvoQsWeb, :html
+  use NuvoqsWeb, :html
 
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML

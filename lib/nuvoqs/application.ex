@@ -1,4 +1,4 @@
-defmodule nuvoQs.Application do
+defmodule Nuvoqs.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
@@ -8,19 +8,19 @@ defmodule nuvoQs.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      nuvoQsWeb.Telemetry,
-      nuvoQs.Repo,
-      {DNSCluster, query: Application.get_env(:nuvoQs, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: nuvoQs.PubSub},
-      # Start a worker by calling: nuvoQs.Worker.start_link(arg)
-      # {nuvoQs.Worker, arg},
+      NuvoqsWeb.Telemetry,
+      Nuvoqs.Repo,
+      {DNSCluster, query: Application.get_env(:nuvoqs, :dns_cluster_query) || :ignore},
+      {Phoenix.PubSub, name: Nuvoqs.PubSub},
+      # Start a worker by calling: Nuvoqs.Worker.start_link(arg)
+      # {Nuvoqs.Worker, arg},
       # Start to serve requests, typically the last entry
-      nuvoQsWeb.Endpoint
+      NuvoqsWeb.Endpoint
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: nuvoQs.Supervisor]
+    opts = [strategy: :one_for_one, name: Nuvoqs.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
@@ -28,7 +28,7 @@ defmodule nuvoQs.Application do
   # whenever the application is updated.
   @impl true
   def config_change(changed, _new, removed) do
-    nuvoQsWeb.Endpoint.config_change(changed, removed)
+    NuvoqsWeb.Endpoint.config_change(changed, removed)
     :ok
   end
 end

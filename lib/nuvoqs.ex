@@ -1,6 +1,6 @@
-defmodule nuvoQs do
+defmodule Nuvoqs do
   @moduledoc """
-  nuvoQs keeps the contexts that define your domain
+  Nuvoqs keeps the contexts that define your domain
   and business logic.
 
   Contexts are also responsible for managing your data, regardless

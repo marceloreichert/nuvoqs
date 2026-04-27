@@ -1,5 +1,5 @@
-defmodule nuvoQsWeb.PageController do
-  use nuvoQsWeb, :controller
+defmodule NuvoqsWeb.PageController do
+  use NuvoqsWeb, :controller
 
   def home(conn, _params) do
     render(conn, :home)

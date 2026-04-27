@@ -1,12 +1,12 @@
-defmodule nuvoQsWeb do
+defmodule NuvoqsWeb do
   @moduledoc """
   The entrypoint for defining your web interface, such
   as controllers, components, channels, and so on.
 
   This can be used in your application as:
 
-      use nuvoQsWeb, :controller
-      use nuvoQsWeb, :html
+      use NuvoqsWeb, :controller
+      use NuvoqsWeb, :html
 
   The definitions below will be executed for every controller,
   component, etc, so keep them short and clean, focused
@@ -40,7 +40,7 @@ defmodule nuvoQsWeb do
     quote do
       use Phoenix.Controller, formats: [:html, :json]
 
-      use Gettext, backend: nuvoQsWeb.Gettext
+      use Gettext, backend: NuvoqsWeb.Gettext
 
       import Plug.Conn
 
@@ -80,16 +80,16 @@ defmodule nuvoQsWeb do
   defp html_helpers do
     quote do
       # Translation
-      use Gettext, backend: nuvoQsWeb.Gettext
+      use Gettext, backend: NuvoqsWeb.Gettext
 
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components
-      import nuvoQsWeb.CoreComponents
+      import NuvoqsWeb.CoreComponents
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS
-      alias nuvoQsWeb.Layouts
+      alias NuvoqsWeb.Layouts
 
       # Routes generation with the ~p sigil
       unquote(verified_routes())
@@ -99,9 +99,9 @@ defmodule nuvoQsWeb do
   def verified_routes do
     quote do
       use Phoenix.VerifiedRoutes,
-        endpoint: nuvoQsWeb.Endpoint,
-        router: nuvoQsWeb.Router,
-        statics: nuvoQsWeb.static_paths()
+        endpoint: NuvoqsWeb.Endpoint,
+        router: NuvoqsWeb.Router,
+        statics: NuvoqsWeb.static_paths()
     end
   end
 

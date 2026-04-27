@@ -1,4 +1,4 @@
-defmodule nuvoQsWeb.Gettext do
+defmodule NuvoqsWeb.Gettext do
   @moduledoc """
   A module providing Internationalization with a gettext-based API.
 
@@ -6,7 +6,7 @@ defmodule nuvoQsWeb.Gettext do
   that you can use in your application. To use this Gettext backend module,
   call `use Gettext` and pass it as an option:
 
-      use Gettext, backend: nuvoQsWeb.Gettext
+      use Gettext, backend: NuvoqsWeb.Gettext
 
       # Simple translation
       gettext("Here is the string to translate")
@@ -21,5 +21,5 @@ defmodule nuvoQsWeb.Gettext do
 
   See the [Gettext Docs](https://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext.Backend, otp_app: :nuvoQs
+  use Gettext.Backend, otp_app: :nuvoqs
 end

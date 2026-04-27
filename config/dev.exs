@@ -1,7 +1,7 @@
 import Config
 
 # Configure your database
-config :nuvoQs, nuvoQs.Repo,
+config :nuvoqs, Nuvoqs.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
@@ -16,7 +16,7 @@ config :nuvoQs, nuvoQs.Repo,
 # The watchers configuration can be used to run external
 # watchers to your application. For example, we can use it
 # to bundle .js and .css sources.
-config :nuvoQs, nuvoQsWeb.Endpoint,
+config :nuvoqs, NuvoqsWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
   http: [ip: {127, 0, 0, 1}, port: String.to_integer(System.get_env("PORT") || "4000")],
@@ -25,8 +25,8 @@ config :nuvoQs, nuvoQsWeb.Endpoint,
   debug_errors: true,
   secret_key_base: "ikYRTUVHiqhv9ZaDcSXk4d9D5n6qRtEB0ieXYfFOBLOQMf3D/jHTmMOpmyCwLMcM",
   watchers: [
-    esbuild: {Esbuild, :install_and_run, [:nuvoQs, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:nuvoQs, ~w(--watch)]}
+    esbuild: {Esbuild, :install_and_run, [:nuvoqs, ~w(--sourcemap=inline --watch)]},
+    tailwind: {Tailwind, :install_and_run, [:nuvoqs, ~w(--watch)]}
   ]
 
 # ## SSL Support
@@ -53,7 +53,7 @@ config :nuvoQs, nuvoQsWeb.Endpoint,
 # different ports.
 
 # Watch static and templates for browser reloading.
-config :nuvoQs, nuvoQsWeb.Endpoint,
+config :nuvoqs, NuvoqsWeb.Endpoint,
   live_reload: [
     web_console_logger: true,
     patterns: [
@@ -64,7 +64,7 @@ config :nuvoQs, nuvoQsWeb.Endpoint,
   ]
 
 # Enable dev routes for dashboard and mailbox
-config :nuvoQs, dev_routes: true
+config :nuvoqs, dev_routes: true
 
 # Do not include metadata nor timestamps in development logs
 config :logger, :default_formatter, format: "[$level] $message\n"

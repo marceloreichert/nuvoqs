@@ -1,9 +1,9 @@
-defmodule nuvoQs.MixProject do
+defmodule Nuvoqs.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :nuvoQs,
+      app: :nuvoqs,
       version: "0.1.0",
       elixir: "~> 1.15",
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -20,7 +20,7 @@ defmodule nuvoQs.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {nuvoQs.Application, []},
+      mod: {Nuvoqs.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -40,6 +40,7 @@ defmodule nuvoQs.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:bcrypt_elixir, "~> 3.0"},
       {:phoenix, "~> 1.8.1"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.13"},
@@ -84,8 +85,8 @@ defmodule nuvoQs.MixProject do
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.build": ["compile", "tailwind nuvoQs", "esbuild nuvoQs"],
       "assets.deploy": [
-        "tailwind nuvoQs --minify",
-        "esbuild nuvoQs --minify",
+        "tailwind nuvoqs --minify",
+        "esbuild nuvoqs --minify",
         "phx.digest"
       ],
       precommit: ["compile --warning-as-errors", "deps.unlock --unused", "format", "test"]

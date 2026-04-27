@@ -1,4 +1,4 @@
-defmodule nuvoQsWeb.Telemetry do
+defmodule NuvoqsWeb.Telemetry do
   use Supervisor
   import Telemetry.Metrics
 
@@ -53,23 +53,23 @@ defmodule nuvoQsWeb.Telemetry do
       ),
 
       # Database Metrics
-      summary("nuvoQs.repo.query.total_time",
+      summary("Nuvoqs.repo.query.total_time",
         unit: {:native, :millisecond},
         description: "The sum of the other measurements"
       ),
-      summary("nuvoQs.repo.query.decode_time",
+      summary("Nuvoqs.repo.query.decode_time",
         unit: {:native, :millisecond},
         description: "The time spent decoding the data received from the database"
       ),
-      summary("nuvoQs.repo.query.query_time",
+      summary("Nuvoqs.repo.query.query_time",
         unit: {:native, :millisecond},
         description: "The time spent executing the query"
       ),
-      summary("nuvoQs.repo.query.queue_time",
+      summary("Nuvoqs.repo.query.queue_time",
         unit: {:native, :millisecond},
         description: "The time spent waiting for a database connection"
       ),
-      summary("nuvoQs.repo.query.idle_time",
+      summary("Nuvoqs.repo.query.idle_time",
         unit: {:native, :millisecond},
         description:
           "The time the connection spent waiting before being checked out for the query"
@@ -87,7 +87,7 @@ defmodule nuvoQsWeb.Telemetry do
     [
       # A module, function and arguments to be invoked periodically.
       # This function must call :telemetry.execute/3 and a metric must be added above.
-      # {nuvoQsWeb, :count_users, []}
+      # {NuvoqsWeb, :count_users, []}
     ]
   end
 end

@@ -1,3 +1,3 @@
-defmodule nuvoQs.Mailer do
-  use Swoosh.Mailer, otp_app: :nuvoQs
+defmodule Nuvoqs.Mailer do
+  use Swoosh.Mailer, otp_app: :nuvoqs
 end
