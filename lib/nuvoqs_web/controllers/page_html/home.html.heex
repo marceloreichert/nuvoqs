@@ -1,0 +1,611 @@
+<Layouts.flash_group flash={@flash} />
+
+<link
+  href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&amp;family=Sora:wght@300;400;600;700;800&amp;display=swap"
+  rel="stylesheet"
+/>
+<style>
+  :root {
+    --orange-deep: #b45309;
+    --orange-brand: #d97706;
+    --orange-bright: #f59e0b;
+    --orange-light: #fbbf24;
+    --orange-glow: #fcd34d;
+    --gold: #f5c542;
+    --amber-warm: #92400e;
+    --surface: #1a0f00;
+    --surface-mid: #261a06;
+    --text-primary: #fef7ed;
+    --text-muted: #c9a76c;
+    --code-bg: #1f1409;
+    --card-bg: rgba(217, 119, 6, 0.08);
+    --card-border: rgba(245, 158, 11, 0.2);
+    --white: #ffffff;
+    --teal-accent: #2dd4bf;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--surface);
+    color: var(--text-primary);
+    font-family: 'Sora', sans-serif;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  .bg-grid {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image:
+      linear-gradient(rgba(245, 158, 11, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245, 158, 11, 0.035) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridShift 20s linear infinite;
+  }
+  @keyframes gridShift {
+    0% { background-position: 0 0; }
+    100% { background-position: 60px 60px; }
+  }
+
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    z-index: 0;
+    pointer-events: none;
+  }
+  .orb-1 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(245, 158, 11, 0.2), transparent 70%);
+    top: -100px; right: -100px;
+    animation: orbFloat1 12s ease-in-out infinite;
+  }
+  .orb-2 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(180, 83, 9, 0.18), transparent 70%);
+    bottom: 10%; left: -80px;
+    animation: orbFloat2 15s ease-in-out infinite;
+  }
+  .orb-3 {
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(252, 211, 77, 0.1), transparent 70%);
+    top: 50%; right: 20%;
+    animation: orbFloat3 18s ease-in-out infinite;
+  }
+  @keyframes orbFloat1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-40px, 60px); } }
+  @keyframes orbFloat2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(50px, -40px); } }
+  @keyframes orbFloat3 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-30px, -50px); } }
+
+  .lp-container {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  nav {
+    padding: 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: fadeDown 0.8s ease-out;
+  }
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo img {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 0 24px rgba(245, 158, 11, 0.35);
+  }
+  .logo-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+  }
+  .logo-name {
+    font-weight: 700;
+    font-size: 1.15rem;
+    letter-spacing: -0.3px;
+    color: var(--text-primary);
+  }
+  .logo-tagline {
+    font-size: 0.68rem;
+    color: var(--text-muted);
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    list-style: none;
+    align-items: center;
+  }
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 400;
+    transition: color 0.3s;
+  }
+  .nav-links a:hover { color: var(--text-primary); }
+  .nav-cta {
+    background: var(--orange-brand) !important;
+    color: var(--surface) !important;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-weight: 600 !important;
+    transition: transform 0.2s, box-shadow 0.3s !important;
+  }
+  .nav-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 24px rgba(245, 158, 11, 0.4) !important;
+  }
+
+  .lp-hero {
+    padding: 80px 0 60px;
+    text-align: center;
+  }
+  .lp-hero-logo-large {
+    width: 120px;
+    height: 120px;
+    # border-radius: 50%;
+    margin: 0 auto 32px;
+    # object-fit: cover;
+    # box-shadow:
+    #   0 0 60px rgba(245, 158, 11, 0.25),
+    #   0 0 120px rgba(245, 158, 11, 0.1);
+    animation: fadeUp 0.8s ease-out 0.15s both;
+  }
+  .lp-hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 100px;
+    padding: 6px 18px 6px 8px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 28px;
+    animation: fadeUp 0.8s ease-out 0.3s both;
+  }
+  .badge-dot {
+    width: 8px; height: 8px;
+    background: var(--teal-accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(45, 212, 191, 0.4); }
+    50% { box-shadow: 0 0 0 6px rgba(45, 212, 191, 0); }
+  }
+
+  h1 {
+    font-size: clamp(2.5rem, 6vw, 4.2rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -2px;
+    margin-bottom: 24px;
+    animation: fadeUp 0.8s ease-out 0.4s both;
+  }
+  h1 .gradient-text {
+    background: linear-gradient(135deg, var(--orange-light), var(--gold), var(--orange-glow));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .lp-hero p {
+    font-size: 1.15rem;
+    color: var(--text-muted);
+    max-width: 620px;
+    margin: 0 auto 40px;
+    font-weight: 300;
+    animation: fadeUp 0.8s ease-out 0.55s both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .lp-hero-actions {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeUp 0.8s ease-out 0.7s both;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--orange-brand), var(--orange-deep));
+    color: var(--white);
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.3s;
+    box-shadow: 0 4px 30px rgba(245, 158, 11, 0.3);
+    font-family: inherit;
+  }
+  .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 40px rgba(245, 158, 11, 0.5);
+  }
+  .btn-secondary {
+    background: var(--card-bg);
+    color: var(--text-primary);
+    padding: 14px 32px;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    border: 1px solid var(--card-border);
+    cursor: pointer;
+    transition: border-color 0.3s, background 0.3s;
+    font-family: inherit;
+  }
+  .btn-secondary:hover {
+    border-color: var(--orange-bright);
+    background: rgba(217, 119, 6, 0.15);
+  }
+
+  .code-section {
+    margin: 60px auto 0;
+    max-width: 720px;
+    animation: fadeUp 0.8s ease-out 0.85s both;
+  }
+  .code-window {
+    background: var(--code-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .code-titlebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 18px;
+    background: rgba(0,0,0,0.3);
+    border-bottom: 1px solid rgba(245, 158, 11, 0.1);
+  }
+  .code-dot { width: 12px; height: 12px; border-radius: 50%; }
+  .code-dot:nth-child(1) { background: #ef4444; }
+  .code-dot:nth-child(2) { background: #eab308; }
+  .code-dot:nth-child(3) { background: #22c55e; }
+  .code-filename {
+    margin-left: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  .code-body {
+    padding: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.8;
+    overflow-x: auto;
+  }
+  .code-body .kw { color: var(--orange-light); }
+  .code-body .fn { color: var(--teal-accent); }
+  .code-body .str { color: #a3e635; }
+  .code-body .mod { color: var(--gold); }
+  .code-body .cmt { color: #555; font-style: italic; }
+  .code-body .at { color: #fb923c; }
+
+  .features { padding: 120px 0 80px; }
+  .features h2 {
+    text-align: center;
+    font-size: 2.2rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+  }
+  .features .subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 1.05rem;
+    font-weight: 300;
+    max-width: 520px;
+    margin: 0 auto 60px;
+  }
+  .lp-divider {
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--orange-brand), transparent);
+    margin: 16px auto 40px;
+    border-radius: 2px;
+  }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+  }
+  .feature-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 32px;
+    transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s;
+  }
+  .feature-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--orange-bright);
+    box-shadow: 0 12px 40px rgba(245, 158, 11, 0.12);
+  }
+  .feature-icon {
+    width: 48px; height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+  }
+  .fi-orange { background: rgba(245, 158, 11, 0.15); }
+  .fi-amber { background: rgba(180, 83, 9, 0.2); }
+  .fi-gold { background: rgba(252, 211, 77, 0.15); }
+  .fi-teal { background: rgba(45, 212, 191, 0.12); }
+  .fi-lime { background: rgba(163, 230, 53, 0.12); }
+  .fi-rose { background: rgba(251, 113, 133, 0.12); }
+
+  .feature-card h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    letter-spacing: -0.3px;
+  }
+  .feature-card p {
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    font-weight: 300;
+    line-height: 1.6;
+  }
+
+  .install-section {
+    padding: 60px 0 120px;
+    text-align: center;
+  }
+  .install-section h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 32px;
+  }
+  .install-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--code-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 18px 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  }
+  .install-box .dollar { color: var(--orange-light); margin-right: 4px; }
+  .copy-btn {
+    background: rgba(245, 158, 11, 0.15);
+    border: 1px solid var(--card-border);
+    color: var(--orange-light);
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+  .copy-btn:hover { background: rgba(245, 158, 11, 0.3); }
+
+  footer {
+    border-top: 1px solid rgba(245, 158, 11, 0.1);
+    padding: 40px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  footer img {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    opacity: 0.7;
+  }
+  footer p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 300;
+  }
+  footer a {
+    color: var(--orange-light);
+    text-decoration: none;
+  }
+  footer a:hover { text-decoration: underline; }
+
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .lp-hero { padding: 60px 0 50px; }
+    .lp-hero-logo-large { width: 90px; height: 90px; border-radius: 50%; }
+    .features-grid { grid-template-columns: 1fr; }
+    .install-box { flex-direction: column; padding: 16px 20px; }
+  }
+</style>
+
+<div class="bg-grid"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="lp-container">
+  <nav>
+    <div class="logo">
+      <img src="/images/A_Nova_Voz.png" alt="nuvoQs" />
+      <div class="logo-text">
+        <span class="logo-name">nuvoQs</span>
+        <span class="logo-tagline">Dados Abertos para os Cidadãos</span>
+      </div>
+    </div>
+    <ul class="nav-links">
+      <li><a href="#features">Recursos</a></li>
+      <li><a href="#code">Código</a></li>
+      <li><a href="https://hexdocs.pm/phoenix_live_view" target="_blank">Docs</a></li>
+      <li><a href="#" target="_blank">GitHub</a></li>
+      <li><a href="#install" class="nav-cta">Começar</a></li>
+    </ul>
+  </nav>
+
+  <section class="lp-hero">
+    <img src="/images/A_Nova_Voz.png" alt="nuvoQs" class="lp-hero-logo-large" />
+    <div class="lp-hero-badge">
+      <span class="badge-dot"></span> nuvoQs - Plataforma de Transparência
+    </div>
+    <h1>
+      Dados públicos,<br />
+      <span class="gradient-text">acessíveis em tempo real.</span>
+    </h1>
+    <p>
+      nuvoQs conecta cidadãos aos dados abertos do governo sem complexidade, sem barreiras.
+    </p>
+    <div class="lp-hero-actions">
+      <a href="#install" class="btn-primary">Explorar a plataforma</a>
+      <a href="#code" class="btn-secondary">Ver como funciona →</a>
+    </div>
+
+    <div class="code-section" id="code">
+      <div class="code-window">
+        <div class="code-titlebar">
+          <span class="code-dot"></span>
+          <span class="code-dot"></span>
+          <span class="code-dot"></span>
+          <span class="code-filename">lib/nova_voz_web/live/dados_live.ex</span>
+        </div>
+        <div class="code-body">
+          <pre><span class="kw">defmodule</span> <span class="mod">NovaVozWeb.DadosLive</span> <span class="kw">do</span>
+  <span class="kw">use</span> <span class="mod">NovaVozWeb</span>, <span class="at">:live_view</span>
+
+  <span class="cmt"># Carrega dados abertos em tempo real</span>
+  <span class="kw">def</span> <span class="fn">mount</span>(_params, _session, socket) <span class="kw">do</span>
+    <span class="kw">if</span> connected?(socket), <span class="at">do:</span> <span class="mod">NovaVoz.PubSub</span>.subscribe(<span class="str">"dados:atualizacoes"</span>)
+
+    &#123;<span class="at">:ok</span>, assign(socket,
+      <span class="at">despesas:</span> <span class="mod">NovaVoz.Dados</span>.listar_despesas(),
+      <span class="at">filtro:</span> <span class="str">"todos"</span>,
+      <span class="at">busca:</span> <span class="str">""</span>
+    )&#125;
+  <span class="kw">end</span>
+
+  <span class="cmt"># Atualização automática via PubSub</span>
+  <span class="kw">def</span> <span class="fn">handle_info</span>(&#123;<span class="at">:despesa_atualizada</span>, despesa&#125;, socket) <span class="kw">do</span>
+    &#123;<span class="at">:noreply</span>, update(socket, <span class="at">:despesas</span>, &amp;[despesa | &amp;1])&#125;
+  <span class="kw">end</span>
+
+  <span class="cmt"># Busca com debounce automático do LiveView</span>
+  <span class="kw">def</span> <span class="fn">handle_event</span>(<span class="str">"buscar"</span>, %&#123;<span class="str">"q"</span> => termo&#125;, socket) <span class="kw">do</span>
+    &#123;<span class="at">:noreply</span>, assign(socket, <span class="at">busca:</span> termo,
+      <span class="at">despesas:</span> <span class="mod">NovaVoz.Dados</span>.buscar(termo))&#125;
+  <span class="kw">end</span>
+<span class="kw">end</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <h2>Por que nuvoQs?</h2>
+    <div class="lp-divider"></div>
+    <p class="subtitle">
+      Transparência pública exige tecnologia que seja rápida, confiável e acessível a todos.
+    </p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon fi-orange">⚡</div>
+        <h3>Dados em tempo real</h3>
+        <p>
+          Novas despesas, licitações e publicações aparecem instantaneamente via WebSocket — sem recarregar a página.
+        </p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-amber">🔍</div>
+        <h3>Busca e filtros reativos</h3>
+        <p>
+          Pesquise gastos por órgão, valor ou período com feedback imediato. Debounce nativo do LiveView garante fluidez.
+        </p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-gold">📊</div>
+        <h3>Dashboards interativos</h3>
+        <p>
+          Visualizações dinâmicas de dados orçamentários atualizadas ao vivo, sem JavaScript customizado.
+        </p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-teal">🔒</div>
+        <h3>Seguro por design</h3>
+        <p>
+          Estado no servidor, sem API pública exposta. A BEAM VM isola processos — uma falha nunca derruba o sistema.
+        </p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-lime">🌐</div>
+        <h3>Acessível a todos</h3>
+        <p>
+          HTML renderizado no servidor garante compatibilidade com dispositivos antigos e conexões lentas. Inclusão digital real.
+        </p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon fi-rose">🏛️</div>
+        <h3>Transparência escalável</h3>
+        <p>
+          Milhões de cidadãos simultâneos em um único servidor Elixir. Custo baixo, impacto máximo.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="install-section" id="install">
+    <h2>Clone e rode localmente</h2>
+    <div class="install-box">
+      <span>
+        <span class="dollar">$</span>
+        git clone https://github.com/anovavoz/plataforma &amp;&amp; cd plataforma &amp;&amp; mix setup
+      </span>
+      <button
+        class="copy-btn"
+        onclick="navigator.clipboard.writeText('git clone https://github.com/anovavoz/plataforma && cd plataforma && mix setup');this.textContent='Copiado!';setTimeout(()=>this.textContent='Copiar',2000)"
+      >
+        Copiar
+      </button>
+    </div>
+  </section>
+
+  <footer>
+    <img src="/images/A_Nova_Voz.png" alt="nuvoQs" />
+    <p>
+      <strong>nuvoQs</strong>
+      — Dados abertos para os cidadãos.
+      Construído com <a href="https://elixir-lang.org" target="_blank">Elixir</a>
+      e <a href="https://phoenixframework.org" target="_blank">Phoenix LiveView</a>.
+    </p>
+  </footer>
+</div>
