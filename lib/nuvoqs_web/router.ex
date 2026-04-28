@@ -54,6 +54,7 @@ defmodule NuvoqsWeb.Router do
       on_mount: [{NuvoqsWeb.UserAuth, :require_authenticated}] do
       live "/users/settings", UserLive.Settings, :edit
       live "/users/settings/confirm-email/:token", UserLive.Settings, :confirm_email
+      live "/chat", ChatLive, :index
     end
 
     post "/users/update-password", UserSessionController, :update_password
@@ -61,6 +62,11 @@ defmodule NuvoqsWeb.Router do
 
   scope "/", NuvoqsWeb do
     pipe_through [:browser]
+
+    live "/politic_br_senate_followers", PoliticBrSenateLive.Index, :index
+    live "/politic_br_senate_followers/new", PoliticBrSenateLive.Form, :new
+    live "/politic_br_senate_followers/:id", PoliticBrSenateLive.Show, :show
+    live "/politic_br_senate_followers/:id/edit", PoliticBrSenateLive.Form, :edit
 
     live_session :current_user,
       on_mount: [{NuvoqsWeb.UserAuth, :mount_current_scope}] do

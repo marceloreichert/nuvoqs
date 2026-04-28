@@ -19,7 +19,7 @@ type_voices =
 
 Repo.insert!(%Nuvoqs.Schemas.VoiceSchema{
   name: "Brasil - Senado Federal",
-  tag: "br_senate",
+  tag: "politic_br_senate",
   sync_time: 1000,
   type_voice_id: type_voices.id
 })

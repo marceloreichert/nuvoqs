@@ -66,7 +66,9 @@ defmodule Nuvoqs.MixProject do
       {:gettext, "~> 0.26"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:timex, "~> 3.7"},
+      {:httpoison, "~> 2.3"}
     ]
   end
 
@@ -83,7 +85,7 @@ defmodule Nuvoqs.MixProject do
       "ecto.reset": ["ecto.drop", "ecto.setup"],
       test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.build": ["compile", "tailwind nuvoQs", "esbuild nuvoQs"],
+      "assets.build": ["compile", "tailwind nuvoqs", "esbuild nuvoqs"],
       "assets.deploy": [
         "tailwind nuvoqs --minify",
         "esbuild nuvoqs --minify",

@@ -15,7 +15,11 @@ defmodule Nuvoqs.Application do
       # Start a worker by calling: Nuvoqs.Worker.start_link(arg)
       # {Nuvoqs.Worker, arg},
       # Start to serve requests, typically the last entry
-      NuvoqsWeb.Endpoint
+      NuvoqsWeb.Endpoint,
+      %{
+        id: Nuvoqs.Voices.Events.Politic.Br.Senate.PoliticBrSenateEvent,
+        start: {Nuvoqs.Behaviours.EventBehaviour, :start_link, [Nuvoqs.Voices.Events.Politic.Br.Senate.PoliticBrSenateEvent]}
+      }
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

@@ -28,10 +28,25 @@ import topbar from "../vendor/topbar";
 const csrfToken = document
   .querySelector("meta[name='csrf-token']")
   .getAttribute("content");
+const ScrollBottom = {
+  mounted() { this.scrollToBottom() },
+  updated() { this.scrollToBottom() },
+  scrollToBottom() { this.el.scrollTop = this.el.scrollHeight },
+};
+
+const AutoResize = {
+  mounted() { this.resize() },
+  updated() { this.resize() },
+  resize() {
+    this.el.style.height = "auto";
+    this.el.style.height = Math.min(this.el.scrollHeight, 120) + "px";
+  },
+};
+
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: { _csrf_token: csrfToken },
-  hooks: { ...colocatedHooks },
+  hooks: { ...colocatedHooks, ScrollBottom, AutoResize },
 });
 
 // Show progress bar on live navigation and form submits
