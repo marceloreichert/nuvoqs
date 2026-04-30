@@ -22,4 +22,16 @@ defmodule Nuvoqs.Chat do
       {:ok, Repo.preload(message, :sender)}
     end
   end
+
+  def bot_message(content, room \\ "general") do
+    %{
+      id: Ecto.UUID.generate(),
+      content: content,
+      room: room,
+      sender_id: nil,
+      sender: %{email: "olivia@nuvoqs.ai"},
+      inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+      bot: true
+    }
+  end
 end

@@ -365,6 +365,24 @@
   .fi-lime { background: rgba(163, 230, 53, 0.12); }
   .fi-rose { background: rgba(251, 113, 133, 0.12); }
 
+  .feature-card {
+    position: relative;
+    overflow: hidden;
+  }
+  .badge-soon {
+    position: absolute;
+    top: 14px;
+    right: -28px;
+    background: var(--orange-brand);
+    color: #fff;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 4px 36px;
+    transform: rotate(45deg);
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(217, 119, 6, 0.4);
+  }
+
   .feature-card h3 {
     font-size: 1.15rem;
     font-weight: 600;
@@ -457,69 +475,46 @@
 <div class="orb orb-2"></div>
 <div class="orb orb-3"></div>
 
+<Layouts.main_nav current_scope={@current_scope} />
+
 <div class="lp-container">
-  <nav>
-    <div class="logo">
-      <img src="/images/A_Nova_Voz.png" alt="nuvoQs" />
-      <div class="logo-text">
-        <span class="logo-name">nuvoQs</span>
-        <span class="logo-tagline">Dados Abertos para os Cidadãos</span>
+  <%= unless @current_scope do %>
+    <section class="lp-hero">
+      <img src="/images/A_Nova_Voz.png" alt="nuvoqs" class="lp-hero-logo-large" />
+
+      <div class="lp-hero-badge">
+        <span class="badge-dot"></span> nuvoqs - Plataforma de Transparência
       </div>
-    </div>
-    <ul class="nav-links">
-      <%= if @current_scope do %>
-        <li>
-          {@current_scope.user.email}
-        </li>
-        <li>
-          <.link href={~p"/users/settings"}>Settings</.link>
-        </li>
-        <li>
-          <.link href={~p"/users/log-out"} method="delete">Log out</.link>
-        </li>
-      <% else %>
-        <li>
-          <.link href={~p"/users/register"} class="nav-cta">Register</.link>
-        </li>
-        <li>
-          <.link href={~p"/users/log-in"} class="nav-cta">Log in</.link>
-        </li>
-      <% end %>
-    </ul>
-  </nav>
 
-  <section class="lp-hero">
-    <img src="/images/A_Nova_Voz.png" alt="nuvoQs" class="lp-hero-logo-large" />
-    <div class="lp-hero-badge">
-      <span class="badge-dot"></span> nuvoQs - Plataforma de Transparência
-    </div>
-    <h1>
-      Dados públicos,<br />
-      <span class="gradient-text">acessíveis em tempo real.</span>
-    </h1>
-    <p>
-      nuvoQs conecta cidadãos aos dados abertos do governo sem complexidade, sem barreiras.
-    </p>
-    <div class="lp-hero-actions">
-      <a href="#install" class="btn-primary">Explorar a plataforma</a>
-      <a href="#code" class="btn-secondary">Ver como funciona →</a>
-    </div>
+      <h1>
+        Dados públicos,<br />
+        <span class="gradient-text">acessíveis em tempo real.</span>
+      </h1>
 
-    <div class="code-section" id="code">
-      <div class="code-window">
-        <div class="code-titlebar">
-          <span class="code-dot"></span>
-          <span class="code-dot"></span>
-          <span class="code-dot"></span>
-          <span class="code-filename">lib/nova_voz_web/live/dados_live.ex</span>
-        </div>
-        <div class="code-body">
-          <pre><span class="kw">defmodule</span> <span class="mod">NovaVozWeb.DadosLive</span> <span class="kw">do</span>
-  <span class="kw">use</span> <span class="mod">NovaVozWeb</span>, <span class="at">:live_view</span>
+      <p>
+        nuvoqs conecta cidadãos aos dados abertos do governo sem complexidade, sem barreiras.
+      </p>
 
-  <span class="cmt"># Carrega dados abertos em tempo real</span>
-  <span class="kw">def</span> <span class="fn">mount</span>(_params, _session, socket) <span class="kw">do</span>
-    <span class="kw">if</span> connected?(socket), <span class="at">do:</span> <span class="mod">NovaVoz.PubSub</span>.subscribe(<span class="str">"dados:atualizacoes"</span>)
+      <div class="lp-hero-actions">
+        <a href="#install" class="btn-primary">Explorar a plataforma</a>
+        <a href="#code" class="btn-secondary">Ver como funciona →</a>
+      </div>
+
+      <div class="code-section" id="code">
+        <div class="code-window">
+          <div class="code-titlebar">
+            <span class="code-dot"></span>
+            <span class="code-dot"></span>
+            <span class="code-dot"></span>
+            <span class="code-filename">lib/nova_voz_web/live/dados_live.ex</span>
+          </div>
+          <div class="code-body">
+            <pre><span class="kw">defmodule</span> <span class="mod">NovaVozWeb.DadosLive</span> <span class="kw">do</span>
+              <span class="kw">use</span> <span class="mod">NovaVozWeb</span>, <span class="at">:live_view</span>
+
+              <span class="cmt"># Carrega dados abertos em tempo real</span>
+              <span class="kw">def</span> <span class="fn">mount</span>(_params, _session, socket) <span class="kw">do</span>
+                <span class="kw">if</span> connected?(socket), <span class="at">do:</span> <span class="mod">NovaVoz.PubSub</span>.subscribe(<span class="str">"dados:atualizacoes"</span>)
 
     &#123;<span class="at">:ok</span>, assign(socket,
       <span class="at">despesas:</span> <span class="mod">NovaVoz.Dados</span>.listar_despesas(),
@@ -538,84 +533,139 @@
     &#123;<span class="at">:noreply</span>, assign(socket, <span class="at">busca:</span> termo,
       <span class="at">despesas:</span> <span class="mod">NovaVoz.Dados</span>.buscar(termo))&#125;
   <span class="kw">end</span>
-<span class="kw">end</span></pre>
+  <span class="kw">end</span></pre>
+          </div>
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+  <% end %>
 
-  <section class="features" id="features">
-    <h2>Por que nuvoQs?</h2>
-    <div class="lp-divider"></div>
-    <p class="subtitle">
-      Transparência pública exige tecnologia que seja rápida, confiável e acessível a todos.
-    </p>
-    <div class="features-grid">
-      <div class="feature-card">
-        <div class="feature-icon fi-orange">⚡</div>
-        <h3>Dados em tempo real</h3>
-        <p>
-          Novas despesas, licitações e publicações aparecem instantaneamente via WebSocket — sem recarregar a página.
-        </p>
+  <%= if @current_scope do %>
+    <section class="features" id="features" style="padding-top: 16px;">
+      <h2>Vozes disponíveis</h2>
+      <div class="lp-divider"></div>
+      <p class="subtitle">Escolha o que deseja ouvir!</p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon" style="background: none; padding: 0;">
+            <img
+              src="/images/senado_federal.png"
+              alt="Senado Federal"
+              style="width: 48px; height: 48px; object-fit: contain; border-radius: 8px;"
+            />
+          </div>
+          <h3>Senado Federal</h3>
+          <p>
+            Acompanhe votações do Senado Federal. Voce receberá informações de como os senadores que voce acompanha estão votando.
+          </p>
+          <a
+            href={~p"/chat?context=politic_br_senate"}
+            class="btn-primary"
+            style="display: inline-block; margin-top: 16px; padding: 10px 24px; font-size: 0.9rem;"
+          >
+            Votações
+          </a>
+        </div>
+        <div class="feature-card">
+          <span class="badge-soon">Em breve</span>
+          <div class="feature-icon fi-amber">🔍</div>
+          <h3>Busca e filtros reativos</h3>
+          <p>
+            Pesquise gastos por órgão, valor ou período com feedback imediato. Debounce nativo do LiveView garante fluidez.
+          </p>
+        </div>
+        <div class="feature-card">
+          <span class="badge-soon">Em breve</span>
+          <div class="feature-icon fi-gold">📊</div>
+          <h3>Dashboards interativos</h3>
+          <p>
+            Visualizações dinâmicas de dados orçamentários atualizadas ao vivo, sem JavaScript customizado.
+          </p>
+        </div>
+        <div class="feature-card">
+          <span class="badge-soon">Em breve</span>
+          <div class="feature-icon fi-teal">🔒</div>
+          <h3>Seguro por design</h3>
+          <p>
+            Estado no servidor, sem API pública exposta. A BEAM VM isola processos — uma falha nunca derruba o sistema.
+          </p>
+        </div>
+        <div class="feature-card">
+          <span class="badge-soon">Em breve</span>
+          <div class="feature-icon fi-lime">🌐</div>
+          <h3>Acessível a todos</h3>
+          <p>
+            HTML renderizado no servidor garante compatibilidade com dispositivos antigos e conexões lentas. Inclusão digital real.
+          </p>
+        </div>
+        <div class="feature-card">
+          <span class="badge-soon">Em breve</span>
+          <div class="feature-icon fi-rose">🏛️</div>
+          <h3>Transparência escalável</h3>
+          <p>
+            Milhões de cidadãos simultâneos em um único servidor Elixir. Custo baixo, impacto máximo.
+          </p>
+        </div>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon fi-amber">🔍</div>
-        <h3>Busca e filtros reativos</h3>
-        <p>
-          Pesquise gastos por órgão, valor ou período com feedback imediato. Debounce nativo do LiveView garante fluidez.
-        </p>
+    </section>
+  <% else %>
+    <section class="features" id="features">
+      <h2>Por que nuvoqs?</h2>
+      <div class="lp-divider"></div>
+      <p class="subtitle">
+        Transparência pública exige tecnologia que seja rápida, confiável e acessível a todos.
+      </p>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon fi-orange">⚡</div>
+          <h3>Dados em tempo real</h3>
+          <p>
+            Novas despesas, licitações e publicações aparecem instantaneamente via WebSocket — sem recarregar a página.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon fi-amber">🔍</div>
+          <h3>Busca e filtros reativos</h3>
+          <p>
+            Pesquise gastos por órgão, valor ou período com feedback imediato. Debounce nativo do LiveView garante fluidez.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon fi-gold">📊</div>
+          <h3>Dashboards interativos</h3>
+          <p>
+            Visualizações dinâmicas de dados orçamentários atualizadas ao vivo, sem JavaScript customizado.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon fi-teal">🔒</div>
+          <h3>Seguro por design</h3>
+          <p>
+            Estado no servidor, sem API pública exposta. A BEAM VM isola processos — uma falha nunca derruba o sistema.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon fi-lime">🌐</div>
+          <h3>Acessível a todos</h3>
+          <p>
+            HTML renderizado no servidor garante compatibilidade com dispositivos antigos e conexões lentas. Inclusão digital real.
+          </p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon fi-rose">🏛️</div>
+          <h3>Transparência escalável</h3>
+          <p>
+            Milhões de cidadãos simultâneos em um único servidor Elixir. Custo baixo, impacto máximo.
+          </p>
+        </div>
       </div>
-      <div class="feature-card">
-        <div class="feature-icon fi-gold">📊</div>
-        <h3>Dashboards interativos</h3>
-        <p>
-          Visualizações dinâmicas de dados orçamentários atualizadas ao vivo, sem JavaScript customizado.
-        </p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon fi-teal">🔒</div>
-        <h3>Seguro por design</h3>
-        <p>
-          Estado no servidor, sem API pública exposta. A BEAM VM isola processos — uma falha nunca derruba o sistema.
-        </p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon fi-lime">🌐</div>
-        <h3>Acessível a todos</h3>
-        <p>
-          HTML renderizado no servidor garante compatibilidade com dispositivos antigos e conexões lentas. Inclusão digital real.
-        </p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon fi-rose">🏛️</div>
-        <h3>Transparência escalável</h3>
-        <p>
-          Milhões de cidadãos simultâneos em um único servidor Elixir. Custo baixo, impacto máximo.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <section class="install-section" id="install">
-    <h2>Clone e rode localmente</h2>
-    <div class="install-box">
-      <span>
-        <span class="dollar">$</span>
-        git clone https://github.com/anovavoz/plataforma &amp;&amp; cd plataforma &amp;&amp; mix setup
-      </span>
-      <button
-        class="copy-btn"
-        onclick="navigator.clipboard.writeText('git clone https://github.com/anovavoz/plataforma && cd plataforma && mix setup');this.textContent='Copiado!';setTimeout(()=>this.textContent='Copiar',2000)"
-      >
-        Copiar
-      </button>
-    </div>
-  </section>
+    </section>
+  <% end %>
 
   <footer>
-    <img src="/images/A_Nova_Voz.png" alt="nuvoQs" />
+    <img src="/images/A_Nova_Voz.png" alt="nuvoqs" />
     <p>
-      <strong>nuvoQs</strong>
+      <strong>nuvoqs</strong>
       — Dados abertos para os cidadãos.
       Construído com <a href="https://elixir-lang.org" target="_blank">Elixir</a>
       e <a href="https://phoenixframework.org" target="_blank">Phoenix LiveView</a>.

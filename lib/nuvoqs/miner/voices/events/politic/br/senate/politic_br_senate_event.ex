@@ -1,10 +1,10 @@
-defmodule Nuvoqs.Voices.Events.Politic.Br.Senate.PoliticBrSenateEvent do
+defmodule Nuvoqs.Miner.Voices.Events.Politic.Br.Senate.PoliticBrSenateEvent do
   require Logger
 
-  alias Nuvoqs.Voices.Sources.Politic.Br.Senate.PoliticBrSenateSource
-  alias Nuvoqs.Voices.Targets.Politic.Br.Senate.PoliticBrSenatePGTarget
+  alias Nuvoqs.Miner.Voices.Sources.Politic.Br.Senate.PoliticBrSenateSource
+  alias Nuvoqs.Miner.Voices.Targets.Politic.Br.Senate.PoliticBrSenatePGTarget
 
-  @behaviour Nuvoqs.Behaviours.EventBehaviour
+  @behaviour Nuvoqs.Miner.Behaviours.EventBehaviour
 
   @interval_ms 1_000 * 60 * 60
 
@@ -61,7 +61,7 @@ defmodule Nuvoqs.Voices.Events.Politic.Br.Senate.PoliticBrSenateEvent do
            "UrlPaginaParlamentar" => url_homepage
          } <-
            parliamentary_identification do
-             case PoliticBrSenatePGTarget.get_member_by(identifier: identifier) do
+      case PoliticBrSenatePGTarget.get_member_by(identifier: identifier) do
         {:ok, :not_found} ->
           board_member = if board_member == "Sim", do: true, else: false
           leadership_member = if leadership_member == "Sim", do: true, else: false

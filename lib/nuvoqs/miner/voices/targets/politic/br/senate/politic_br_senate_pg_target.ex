@@ -1,4 +1,4 @@
-defmodule Nuvoqs.Voices.Targets.Politic.Br.Senate.PoliticBrSenatePGTarget do
+defmodule Nuvoqs.Miner.Voices.Targets.Politic.Br.Senate.PoliticBrSenatePGTarget do
   @moduledoc false
 
   alias Nuvoqs.Schemas.Politic.Br.Senate.PoliticBrSenateMemberSchema
@@ -6,8 +6,8 @@ defmodule Nuvoqs.Voices.Targets.Politic.Br.Senate.PoliticBrSenatePGTarget do
 
   def post_member(attrs) do
     case %PoliticBrSenateMemberSchema{}
-           |> PoliticBrSenateMemberSchema.changeset(attrs)
-           |> Repo.insert() do
+         |> PoliticBrSenateMemberSchema.changeset(attrs)
+         |> Repo.insert() do
       {:ok, member} -> {:ok, member.id}
       {:error, changeset} -> {:error, changeset}
     end

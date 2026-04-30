@@ -1,4 +1,4 @@
-defmodule Nuvoqs.Targets.Politic.Br.Senate.PoliticBrSenatePgFollowerTarget do
+defmodule Nuvoqs.Miner.Targets.Politic.Br.Senate.PoliticBrSenatePgFollowerTarget do
   @moduledoc """
   The PoliticBrSenatePgFollowerTarget context.
   """

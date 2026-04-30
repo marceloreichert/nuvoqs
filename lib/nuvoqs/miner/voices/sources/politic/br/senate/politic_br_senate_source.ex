@@ -1,4 +1,4 @@
-defmodule Nuvoqs.Voices.Sources.Politic.Br.Senate.PoliticBrSenateSource do
+defmodule Nuvoqs.Miner.Voices.Sources.Politic.Br.Senate.PoliticBrSenateSource do
   @moduledoc false
 
   @url_list "https://legis.senado.leg.br/dadosabertos/senador/lista/atual"

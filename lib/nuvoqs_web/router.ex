@@ -60,6 +60,26 @@ defmodule NuvoqsWeb.Router do
     post "/users/update-password", UserSessionController, :update_password
   end
 
+  scope "/api", NuvoqsWeb do
+    pipe_through :api
+
+    # Send a message to a session
+    post "/sessions/:session_id/messages", MessageController, :create
+
+    # Get session state
+    get "/sessions/:session_id", SessionController, :show
+
+    # Start a specific flow in a session
+    post "/sessions/:session_id/flows/:flow_name", SessionController, :start_flow
+
+    # Reset a session
+    delete "/sessions/:session_id", SessionController, :reset
+
+    # Flow management
+    get "/flows", FlowController, :index
+    post "/flows", FlowController, :create
+  end
+
   scope "/", NuvoqsWeb do
     pipe_through [:browser]
 

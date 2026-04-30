@@ -65,6 +65,32 @@ config :tailwind,
     cd: Path.expand("..", __DIR__)
   ]
 
+# ── Nx / EXLA ──
+# Use EXLA CPU backend for Bumblebee inference (no GPU required)
+config :nx, :default_backend, EXLA.Backend
+
+config :exla,
+  preferred_clients: [:host],
+  clients: [host: [platform: :host]]
+
+# ── NLU Provider ──
+# To switch to WitClient (cloud), change provider to:
+# Nuvoqs.OliviaEngine.NLU.WitClient
+config :nuvoqs, Nuvoqs.OliviaEngine.NLU,
+  provider: Nuvoqs.OliviaEngine.NLU.BumblebeeNLU
+
+config :nuvoqs, Nuvoqs.OliviaEngine.NLU.BumblebeeNLU,
+  # Embedding model para similaridade semântica multilingual (PT-BR nativo)
+  embedding_model: "intfloat/multilingual-e5-small",
+  ner_model: "dslim/bert-base-NER",
+  ner_tokenizer: "google-bert/bert-base-cased",
+  confidence_threshold: 0.6
+
+config :nuvoqs, Nuvoqs.OliviaEngine.NLU.WitClient,
+  server_token: System.get_env("WIT_SERVER_TOKEN") || "CK4BAITE52NIHI4CMFXCYFZS4WMYPBXG",
+  api_version: "20240304",
+  confidence_threshold: 0.6
+
 # Configures Elixir's Logger
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",

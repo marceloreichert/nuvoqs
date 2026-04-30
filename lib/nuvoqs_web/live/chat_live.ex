@@ -1,7 +1,9 @@
 defmodule NuvoqsWeb.ChatLive do
+  require Logger
   use NuvoqsWeb, :live_view
 
   alias Nuvoqs.Chat
+  alias NuvoqsWeb.Layouts
 
   @topic "chat:general"
 
@@ -31,10 +33,16 @@ defmodule NuvoqsWeb.ChatLive do
         overflow: hidden;
       }
 
+      .chat-wrapper {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 73px);
+      }
       .chat-layout {
         display: flex;
         flex-direction: column;
-        height: 100vh;
+        flex: 1;
+        overflow: hidden;
       }
 
       .chat-header {
@@ -287,35 +295,70 @@ defmodule NuvoqsWeb.ChatLive do
         gap: 10px;
         opacity: 0.6;
       }
+
+      .olivia-avatar {
+        background: linear-gradient(135deg, var(--orange-brand), var(--orange-deep));
+        color: #fff;
+        border: none;
+        box-shadow: 0 0 12px rgba(217, 119, 6, 0.4);
+      }
+
+      .msg-sender-name {
+        font-size: 0.72rem;
+        color: var(--text-muted);
+        margin-bottom: 2px;
+        padding-left: 2px;
+      }
+
+      .msg-sender-name.olivia-name {
+        color: var(--orange-light);
+        font-weight: 600;
+      }
+
+      .chat-at-hint {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        text-align: center;
+        padding: 4px 0 2px;
+        opacity: 0.5;
+      }
     </style>
 
-    <div class="chat-layout">
-      <header class="chat-header">
-        <.link navigate={~p"/"} class="chat-header-back">
-          ←
-        </.link>
-        <img src="/images/A_Nova_Voz.png" alt="NuvoQS" class="chat-header-avatar" />
-        <div class="chat-header-info">
-          <div class="chat-header-name">NuvoQS — Geral</div>
-          <div class="chat-header-status">online</div>
+    <Layouts.main_nav current_scope={@current_scope} />
+
+    <div class="chat-wrapper">
+      <div :if={@chat_context} style="display: flex; align-items: center; gap: 14px; padding: 12px 24px; background: rgba(217, 119, 6, 0.06); border-bottom: 1px solid rgba(245, 158, 11, 0.15); flex-shrink: 0;">
+        <img src={@chat_context.icon} style="width: 36px; height: 36px; object-fit: contain; border-radius: 6px;" />
+        <div>
+          <div style="font-weight: 700; font-size: 1rem; color: #fef7ed;">{@chat_context.title}</div>
+          <div style="font-size: 0.75rem; color: #c9a76c;">{@chat_context.subtitle}</div>
         </div>
-      </header>
+      </div>
+
+      <div class="chat-layout">
 
       <div class="chat-messages" id="chat-messages" phx-hook="ScrollBottom">
         <div :if={@messages_empty} class="chat-empty">
-          <span>💬</span>
-          Nenhuma mensagem ainda. Seja o primeiro!
+          <span>💬</span> Nenhuma mensagem ainda. Seja o primeiro!
         </div>
 
         <div :for={{dom_id, msg} <- @streams.messages} id={dom_id}>
           <div class={"msg-row #{if msg.sender_id == @current_user_id, do: "sent", else: "received"}"}>
             <div
               :if={msg.sender_id != @current_user_id}
-              class="msg-avatar"
+              class={"msg-avatar #{if is_nil(msg.sender_id), do: "olivia-avatar", else: ""}"}
             >
-              {msg.sender.email |> String.upcase() |> String.first()}
+              {if is_nil(msg.sender_id),
+                do: "✦",
+                else: msg.sender.email |> String.upcase() |> String.first()}
             </div>
             <div>
+              <div
+                :if={msg.sender_id != @current_user_id}
+                class={"msg-sender-name #{if is_nil(msg.sender_id), do: "olivia-name", else: ""}"}
+              >
+                {if is_nil(msg.sender_id), do: "Olivia", else: msg.sender.email}
+              </div>
               <div class="msg-bubble">{msg.content}</div>
               <div class="msg-meta">
                 {Calendar.strftime(msg.inserted_at, "%H:%M")}
@@ -331,7 +374,7 @@ defmodule NuvoqsWeb.ChatLive do
             <textarea
               name="content"
               class="chat-input"
-              placeholder="Digite uma mensagem..."
+              placeholder="Digite uma mensagem... (use @olivia para falar com a IA)"
               rows="1"
               value={@content}
               phx-hook="AutoResize"
@@ -346,22 +389,33 @@ defmodule NuvoqsWeb.ChatLive do
         </form>
       </div>
     </div>
+    </div>
     """
   end
 
+  @contexts %{
+    "politic_br_senate" => %{
+      title: "Senado Federal",
+      subtitle: "Votações e acompanhamento de senadores",
+      icon: "/images/senado_federal.png"
+    }
+  }
+
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, _session, socket) do
     if connected?(socket) do
       Phoenix.PubSub.subscribe(Nuvoqs.PubSub, @topic)
     end
 
     user = socket.assigns.current_scope.user
     messages = Chat.list_messages()
+    context = Map.get(@contexts, params["context"])
 
     {:ok,
      socket
      |> assign(:current_user_id, user.id)
      |> assign(:content, "")
+     |> assign(:chat_context, context)
      |> assign(:messages_empty, messages == [])
      |> stream(:messages, messages)}
   end
@@ -377,6 +431,7 @@ defmodule NuvoqsWeb.ChatLive do
            }) do
         {:ok, message} ->
           Phoenix.PubSub.broadcast(Nuvoqs.PubSub, @topic, {:new_message, message})
+          maybe_invoke_olivia(content, socket.assigns.current_user_id)
           {:noreply, assign(socket, :content, "")}
 
         {:error, _changeset} ->
@@ -397,5 +452,35 @@ defmodule NuvoqsWeb.ChatLive do
      socket
      |> assign(:messages_empty, false)
      |> stream_insert(:messages, message)}
+  end
+
+  def handle_info({:bot_message, message}, socket) do
+    {:noreply,
+     socket
+     |> assign(:messages_empty, false)
+     |> stream_insert(:messages, message)}
+  end
+
+  defp maybe_invoke_olivia(content, user_id) do
+    if String.match?(content, ~r/^@olivia\s+/i) do
+      query = Regex.replace(~r/^@olivia\s+/i, content, "")
+      session_id = to_string(user_id)
+      topic = @topic
+
+      Task.start(fn ->
+        case Nuvoqs.OliviaEngine.Session.send_message(session_id, query) do
+          {:ok, responses} ->
+            Logger.info("Received responses: #{inspect(responses)}")
+
+            Enum.each(responses, fn response ->
+              bot_msg = Chat.bot_message(response)
+              Phoenix.PubSub.broadcast(Nuvoqs.PubSub, topic, {:bot_message, bot_msg})
+            end)
+
+          _ ->
+            :ok
+        end
+      end)
+    end
   end
 end

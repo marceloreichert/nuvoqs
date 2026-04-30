@@ -1,4 +1,4 @@
-defmodule Nuvoqs.Behaviours.EventBehaviour do
+defmodule Nuvoqs.Miner.Behaviours.EventBehaviour do
   @callback process_event() :: :ok
   @callback interval_ms() :: integer()
 

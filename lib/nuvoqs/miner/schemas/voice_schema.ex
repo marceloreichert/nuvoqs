@@ -1,4 +1,4 @@
-defmodule Nuvoqs.Schemas.VoiceSchema do
+defmodule Nuvoqs.Miner.Schemas.VoiceSchema do
   use Nuvoqs.Schema
   import Ecto.Changeset
 
