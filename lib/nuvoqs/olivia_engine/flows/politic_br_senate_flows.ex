@@ -39,7 +39,7 @@ defmodule Nuvoqs.OliviaEngine.Flows.PoliticBrSenate do
   flow "consultar_senador" do
     node :ask_name do
       say("Qual o nome do senador que deseja consultar?")
-      slot :senator_name, prompt: "Digite o nome do senador:", validator: :senator_exists
+      slot :senator_name, prompt: "Digite o nome do senador:", validator: :senator_busca
       on_slots_filled(:show_info)
     end
 
@@ -71,7 +71,7 @@ defmodule Nuvoqs.OliviaEngine.Flows.PoliticBrSenate do
     end
 
     node :confirm_unfollow do
-      say("Deseja deixar de acompanhar {{senator_name}}?")
+      action(:confirm_unfollow_prompt)
       transition(:do_unfollow, when: "confirm")
       transition(:cancel, when: "deny")
     end

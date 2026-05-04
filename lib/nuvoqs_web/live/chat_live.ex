@@ -7,6 +7,7 @@ defmodule NuvoqsWeb.ChatLive do
   alias Nuvoqs.OliviaEngine.NLU.IntentPhrases
 
   @topic "chat:general"
+  @intent_only ~w[confirm deny]
 
   @impl true
   def render(assigns) do
@@ -541,8 +542,10 @@ defmodule NuvoqsWeb.ChatLive do
     suggestions = socket.assigns.context_suggestions
 
     if suggestions != [] do
-      msg = Chat.bot_message("Como posso ajudar? Escolha uma opção:", suggestions: suggestions)
-      Phoenix.PubSub.broadcast(Nuvoqs.PubSub, @topic, {:new_message, msg})
+      case Chat.create_bot_message("Como posso ajudar? Escolha uma opção:", %{suggestions: suggestions}) do
+        {:ok, msg} -> Phoenix.PubSub.broadcast(Nuvoqs.PubSub, @topic, {:new_message, msg})
+        _ -> :ok
+      end
     end
 
     {:noreply, socket}
@@ -554,7 +557,13 @@ defmodule NuvoqsWeb.ChatLive do
       case Chat.create_message(%{content: text, sender_id: socket.assigns.current_user_id}) do
         {:ok, message} ->
           Phoenix.PubSub.broadcast(Nuvoqs.PubSub, @topic, {:new_message, message})
-          invoke_olivia_flow(flow_name, socket.assigns.current_user_id, socket.assigns.chat_context_key)
+
+          if flow_name in @intent_only do
+            invoke_olivia_intent(flow_name, socket.assigns.current_user_id, socket.assigns.chat_context_key)
+          else
+            invoke_olivia_flow(flow_name, socket.assigns.current_user_id, socket.assigns.chat_context_key)
+          end
+
           {:noreply, socket}
 
         {:error, _} ->
@@ -573,12 +582,41 @@ defmodule NuvoqsWeb.ChatLive do
      |> stream_insert(:messages, message)}
   end
 
+  @impl true
   def handle_info({:bot_messages, messages}, socket) do
-    Enum.each(messages, fn msg ->
-      Phoenix.PubSub.broadcast(Nuvoqs.PubSub, @topic, {:new_message, msg})
-    end)
+    socket =
+      Enum.reduce(messages, socket, fn msg, acc ->
+        acc
+        |> assign(:messages_empty, false)
+        |> stream_insert(:messages, msg)
+      end)
 
     {:noreply, socket}
+  end
+
+  defp invoke_olivia_intent(intent, user_id, context) do
+    session_id = to_string(user_id)
+    topic = @topic
+
+    Task.start(fn ->
+      case Nuvoqs.OliviaEngine.Session.send_intent(session_id, intent, context) do
+        {:ok, responses} ->
+          msgs =
+            Enum.flat_map(responses, fn {text, meta} ->
+              case Chat.create_bot_message(text, meta) do
+                {:ok, msg} -> [msg]
+                _ -> []
+              end
+            end)
+
+          if msgs != [] do
+            Phoenix.PubSub.broadcast(Nuvoqs.PubSub, topic, {:bot_messages, msgs})
+          end
+
+        _ ->
+          :ok
+      end
+    end)
   end
 
   defp invoke_olivia_flow(flow_name, user_id, context) do
@@ -588,10 +626,17 @@ defmodule NuvoqsWeb.ChatLive do
     Task.start(fn ->
       case Nuvoqs.OliviaEngine.Session.start_flow(session_id, flow_name, context) do
         {:ok, responses} ->
-          Enum.each(responses, fn {text, meta} ->
-            msg = Chat.bot_message(text, image_url: meta[:image_url], suggestions: meta[:suggestions] || [])
-            Phoenix.PubSub.broadcast(Nuvoqs.PubSub, topic, {:new_message, msg})
-          end)
+          msgs =
+            Enum.flat_map(responses, fn {text, meta} ->
+              case Chat.create_bot_message(text, meta) do
+                {:ok, msg} -> [msg]
+                _ -> []
+              end
+            end)
+
+          if msgs != [] do
+            Phoenix.PubSub.broadcast(Nuvoqs.PubSub, topic, {:bot_messages, msgs})
+          end
 
         _ ->
           :ok
@@ -608,10 +653,17 @@ defmodule NuvoqsWeb.ChatLive do
         {:ok, responses} ->
           Logger.info("Received responses: #{inspect(responses)}")
 
-          Enum.each(responses, fn {text, meta} ->
-            msg = Chat.bot_message(text, image_url: meta[:image_url], suggestions: meta[:suggestions] || [])
-            Phoenix.PubSub.broadcast(Nuvoqs.PubSub, topic, {:new_message, msg})
-          end)
+          msgs =
+            Enum.flat_map(responses, fn {text, meta} ->
+              case Chat.create_bot_message(text, meta) do
+                {:ok, msg} -> [msg]
+                _ -> []
+              end
+            end)
+
+          if msgs != [] do
+            Phoenix.PubSub.broadcast(Nuvoqs.PubSub, topic, {:bot_messages, msgs})
+          end
 
         _ ->
           :ok

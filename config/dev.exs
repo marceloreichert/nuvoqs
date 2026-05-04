@@ -59,7 +59,7 @@ config :nuvoqs, NuvoqsWeb.Endpoint,
     patterns: [
       ~r"priv/static/(?!uploads/).*(js|css|png|jpeg|jpg|gif|svg)$",
       ~r"priv/gettext/.*(po)$",
-      ~r"lib/nuvoQs_web/(?:controllers|live|components|router)/?.*\.(ex|heex)$"
+      ~r"lib/nuvoqs_web/(?:controllers|live|components|router)/?.*\.(ex|heex)$"
     ]
   ]
 

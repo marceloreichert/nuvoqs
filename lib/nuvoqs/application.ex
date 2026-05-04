@@ -55,6 +55,13 @@ defmodule Nuvoqs.Application do
     alias Nuvoqs.OliviaEngine.Flow.Actions
     alias Nuvoqs.OliviaEngine.Flows.SenateQuery
 
+    Actions.register_validator(:senator_busca, fn name ->
+      case SenateQuery.search_by_name(name) do
+        [] -> {:error, "Nenhum senador encontrado com \"#{name}\". Tente outro nome."}
+        _  -> {:ok, name}
+      end
+    end)
+
     Actions.register_validator(:senator_exists, fn name ->
       case SenateQuery.search_by_name(name) do
         [] ->
@@ -102,27 +109,31 @@ defmodule Nuvoqs.Application do
 
     Actions.register(:consultar_senador, fn ctx ->
       name = ctx.slots[:senator_name]
-      url_photo = ctx.slots[:senator_url_photo]
 
       case SenateQuery.search_by_name(name) do
         [] ->
           {:ok, "Não encontrei nenhum senador com o nome \"#{name}\". Tente outro nome."}
 
-        [member | _] ->
-          data = member.data
-
+        members ->
           entries =
-            [
-              {data["full_name"] || data["name"] || "—", %{}},
-              {"", %{image_url: url_photo}},
-              {"Nome parlamentar: #{data["name"] || "—"}", %{}},
-              {"Partido: #{data["party_acronym"] || "—"} / Estado: #{data["uf"] || "—"}", %{}}
-            ]
-            |> then(fn e ->
-              if email = data["email"], do: e ++ [{"E-mail: #{email}", %{}}], else: e
-            end)
-            |> then(fn e ->
-              if url = data["url_homepage"], do: e ++ [{"Página: #{url}", %{}}], else: e
+            Enum.flat_map(members, fn member ->
+              data = member.data
+              url_photo = data["url_photo"]
+
+              base = [
+                {data["full_name"] || data["name"] || "—", %{}},
+                {"", %{image_url: url_photo}},
+                {"Nome parlamentar: #{data["name"] || "—"}", %{}},
+                {"Partido: #{data["party_acronym"] || "—"} / Estado: #{data["uf"] || "—"}", %{}}
+              ]
+
+              base
+              |> then(fn e ->
+                if email = data["email"], do: e ++ [{"E-mail: #{email}", %{}}], else: e
+              end)
+              |> then(fn e ->
+                if url = data["url_homepage"], do: e ++ [{"Página: #{url}", %{}}], else: e
+              end)
             end)
 
           {:ok, :multi, entries}
@@ -178,6 +189,12 @@ defmodule Nuvoqs.Application do
 
           {:ok, :multi, [header | entries]}
       end
+    end)
+
+    Actions.register(:confirm_unfollow_prompt, fn ctx ->
+      name = ctx.slots[:senator_name]
+      {:ok, "Deseja deixar de acompanhar #{name}?",
+       %{suggestions: [{"Sim", "confirm"}, {"Não", "deny"}]}}
     end)
 
     Actions.register(:deixar_de_seguir_senador, fn ctx ->

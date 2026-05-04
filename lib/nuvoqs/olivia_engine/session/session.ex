@@ -66,6 +66,18 @@ defmodule Nuvoqs.OliviaEngine.Session do
     end
   end
 
+  @doc "Send a pre-classified intent directly to the engine, bypassing NLU."
+  @spec send_intent(String.t(), String.t(), String.t() | nil) :: {:ok, [tuple()]} | {:error, term()}
+  def send_intent(session_id, intent, context \\ nil) do
+    case ensure_session(session_id) do
+      {:ok, _pid} ->
+        GenServer.call(via(session_id), {:intent, intent, context}, 60_000)
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   @doc "Reset a session's dialog context."
   @spec reset(String.t()) :: :ok | {:error, :not_found}
   def reset(session_id) do
@@ -134,6 +146,30 @@ defmodule Nuvoqs.OliviaEngine.Session do
         else: state.context
 
     case Engine.start_flow(ctx, flow_name) do
+      {:ok, new_ctx, responses} ->
+        state = %{state | context: new_ctx, last_active_at: DateTime.utc_now()}
+        {:reply, {:ok, responses}, state, @timeout_ms}
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, state, @timeout_ms}
+    end
+  end
+
+  @impl true
+  def handle_call({:intent, intent, context}, _from, state) do
+    ctx =
+      if context,
+        do: put_in(state.context, [:metadata, :chat_context], context),
+        else: state.context
+
+    nlu_result = %Nuvoqs.OliviaEngine.NLU.BumblebeeNLU{
+      text: intent,
+      intents: [%{name: intent, confidence: 1.0}],
+      entities: [],
+      traits: %{}
+    }
+
+    case Engine.process_message(ctx, nlu_result) do
       {:ok, new_ctx, responses} ->
         state = %{state | context: new_ctx, last_active_at: DateTime.utc_now()}
         {:reply, {:ok, responses}, state, @timeout_ms}

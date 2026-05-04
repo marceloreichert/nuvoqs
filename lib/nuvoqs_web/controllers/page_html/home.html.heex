@@ -482,61 +482,14 @@
     <section class="lp-hero">
       <img src="/images/A_Nova_Voz.png" alt="nuvoqs" class="lp-hero-logo-large" />
 
-      <div class="lp-hero-badge">
-        <span class="badge-dot"></span> nuvoqs - Plataforma de Transparência
-      </div>
-
       <h1>
         Dados públicos,<br />
-        <span class="gradient-text">acessíveis em tempo real.</span>
+        <span class="gradient-text">acessíveis via chat.</span>
       </h1>
 
       <p>
-        nuvoqs conecta cidadãos aos dados abertos do governo sem complexidade, sem barreiras.
+        Nuvoqs conecta cidadãos aos dados abertos do governo sem complexidade, sem barreiras.
       </p>
-
-      <div class="lp-hero-actions">
-        <a href="#install" class="btn-primary">Explorar a plataforma</a>
-        <a href="#code" class="btn-secondary">Ver como funciona →</a>
-      </div>
-
-      <div class="code-section" id="code">
-        <div class="code-window">
-          <div class="code-titlebar">
-            <span class="code-dot"></span>
-            <span class="code-dot"></span>
-            <span class="code-dot"></span>
-            <span class="code-filename">lib/nova_voz_web/live/dados_live.ex</span>
-          </div>
-          <div class="code-body">
-            <pre><span class="kw">defmodule</span> <span class="mod">NovaVozWeb.DadosLive</span> <span class="kw">do</span>
-              <span class="kw">use</span> <span class="mod">NovaVozWeb</span>, <span class="at">:live_view</span>
-
-              <span class="cmt"># Carrega dados abertos em tempo real</span>
-              <span class="kw">def</span> <span class="fn">mount</span>(_params, _session, socket) <span class="kw">do</span>
-                <span class="kw">if</span> connected?(socket), <span class="at">do:</span> <span class="mod">NovaVoz.PubSub</span>.subscribe(<span class="str">"dados:atualizacoes"</span>)
-
-    &#123;<span class="at">:ok</span>, assign(socket,
-      <span class="at">despesas:</span> <span class="mod">NovaVoz.Dados</span>.listar_despesas(),
-      <span class="at">filtro:</span> <span class="str">"todos"</span>,
-      <span class="at">busca:</span> <span class="str">""</span>
-    )&#125;
-  <span class="kw">end</span>
-
-  <span class="cmt"># Atualização automática via PubSub</span>
-  <span class="kw">def</span> <span class="fn">handle_info</span>(&#123;<span class="at">:despesa_atualizada</span>, despesa&#125;, socket) <span class="kw">do</span>
-    &#123;<span class="at">:noreply</span>, update(socket, <span class="at">:despesas</span>, &amp;[despesa | &amp;1])&#125;
-  <span class="kw">end</span>
-
-  <span class="cmt"># Busca com debounce automático do LiveView</span>
-  <span class="kw">def</span> <span class="fn">handle_event</span>(<span class="str">"buscar"</span>, %&#123;<span class="str">"q"</span> => termo&#125;, socket) <span class="kw">do</span>
-    &#123;<span class="at">:noreply</span>, assign(socket, <span class="at">busca:</span> termo,
-      <span class="at">despesas:</span> <span class="mod">NovaVoz.Dados</span>.buscar(termo))&#125;
-  <span class="kw">end</span>
-  <span class="kw">end</span></pre>
-          </div>
-        </div>
-      </div>
     </section>
   <% end %>
 
