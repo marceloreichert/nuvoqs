@@ -9,6 +9,7 @@ defmodule Nuvoqs.OliviaEngine.Flow.Engine do
 
   alias Nuvoqs.OliviaEngine.Flow.{Registry, Definition, Node}
   alias Nuvoqs.OliviaEngine.NLU
+  alias Nuvoqs.OliviaEngine.NLU.IntentPhrases
 
   require Logger
 
@@ -23,13 +24,13 @@ defmodule Nuvoqs.OliviaEngine.Flow.Engine do
   @doc "Creates a fresh dialog context."
   @spec new_context() :: context()
   def new_context do
-    %{
-      flow_name: nil,
-      current_node: nil,
-      slots: %{},
-      history: [],
-      metadata: %{}
-    }
+    %{flow_name: nil, current_node: nil, slots: %{}, history: [], metadata: %{}}
+  end
+
+  @doc "Resets flow state but preserves metadata (e.g. user_id)."
+  @spec reset_context(context()) :: context()
+  def reset_context(ctx) do
+    %{new_context() | metadata: ctx.metadata}
   end
 
   @doc """
@@ -55,33 +56,40 @@ defmodule Nuvoqs.OliviaEngine.Flow.Engine do
   @spec process_message(context(), map()) ::
           {:ok, context(), [String.t()]} | {:error, term()}
   def process_message(%{flow_name: nil} = ctx, nlu_result) do
-    # No active flow - try to match intent to a flow
     case resolve_flow_from_intent(nlu_result) do
       {:ok, flow_name} ->
         start_flow(ctx, flow_name)
 
       :no_match ->
-        {:ok, ctx, ["I'm not sure what you'd like to do. Can you rephrase that?"]}
+        suggestions = IntentPhrases.suggestions_for_context(ctx.metadata[:chat_context])
+        {:ok, ctx, [{"Não entendi. Pode tentar de outra forma?", %{suggestions: suggestions}}]}
     end
   end
 
   def process_message(%{flow_name: flow_name, current_node: node_name} = ctx, nlu_result) do
     case Registry.lookup(flow_name) do
       {:ok, flow} ->
-        node = Map.fetch!(flow.nodes, node_name)
-        ctx = fill_slots_from_nlu(ctx, node, nlu_result)
+        intent = NLU.top_intent(nlu_result)
 
-        cond do
-          has_unfilled_required_slots?(node, ctx.slots) ->
-            prompt = next_slot_prompt(node, ctx.slots)
-            {:ok, ctx, [prompt]}
+        if intent in ["cancel", "goodbye"] do
+          {:ok, reset_context(ctx), [{"Ok! Se precisar de mais alguma coisa, é só chamar.", %{}}]}
+        else
+          node = Map.fetch!(flow.nodes, node_name)
+          {ctx, slot_errors} = fill_slots_from_nlu(ctx, node, nlu_result)
 
-          node.on_slots_filled != nil ->
-            ctx = %{ctx | history: [node_name | ctx.history]}
-            enter_node(ctx, flow, node.on_slots_filled)
+          cond do
+            has_unfilled_required_slots?(node, ctx.slots) ->
+              prompt = next_slot_prompt(node, ctx.slots)
+              error_tuples = slot_errors |> Map.values() |> Enum.map(&{&1, %{}})
+              {:ok, ctx, error_tuples ++ [{prompt, %{}}]}
 
-          true ->
-            evaluate_transitions(ctx, flow, node, nlu_result)
+            node.on_slots_filled != nil ->
+              ctx = %{ctx | history: [node_name | ctx.history]}
+              enter_node(ctx, flow, node.on_slots_filled)
+
+            true ->
+              evaluate_transitions(ctx, flow, node, nlu_result)
+          end
         end
 
       :not_found ->
@@ -95,59 +103,82 @@ defmodule Nuvoqs.OliviaEngine.Flow.Engine do
     node = Map.fetch!(flow.nodes, node_name)
     ctx = %{ctx | current_node: node_name, history: [node_name | ctx.history]}
 
-    responses = []
+    case run_action(node.action, ctx) do
+      {:halt, msg} ->
+        {:ok, reset_context(ctx), [{msg, %{}}]}
 
-    # Execute action if present
-    responses =
-      case node.action do
-        nil ->
-          responses
-
-        action_name ->
-          case Nuvoqs.OliviaEngine.Flow.Actions.execute(action_name, ctx) do
-            {:ok, msg} -> responses ++ [msg]
-            _ -> responses
+      action_responses ->
+        responses =
+          case node.say do
+            nil  -> action_responses
+            text -> action_responses ++ [{interpolate(text, ctx.slots), %{}}]
           end
-      end
 
-    # Add "say" message with slot interpolation
-    responses =
-      case node.say do
-        nil -> responses
-        text -> responses ++ [interpolate(text, ctx.slots)]
-      end
+        if node.terminal do
+          {:ok, reset_context(ctx), responses}
+        else
+          if node.slots != [] and has_unfilled_required_slots?(node, ctx.slots) do
+            prompt = next_slot_prompt(node, ctx.slots)
+            {:ok, ctx, responses ++ [{prompt, %{}}]}
+          else
+            {:ok, ctx, responses}
+          end
+        end
+    end
+  end
 
-    if node.terminal do
-      # Reset context after terminal node
-      {:ok, new_context(), responses}
-    else
-      if node.slots != [] and has_unfilled_required_slots?(node, ctx.slots) do
-        prompt = next_slot_prompt(node, ctx.slots)
-        {:ok, ctx, responses ++ [prompt]}
-      else
-        {:ok, ctx, responses}
-      end
+  defp run_action(nil, _ctx), do: []
+  defp run_action(action_name, ctx) do
+    case Nuvoqs.OliviaEngine.Flow.Actions.execute(action_name, ctx) do
+      {:halt, msg}           -> {:halt, msg}
+      {:ok, :multi, entries} -> entries
+      {:ok, msg, meta}       -> [{msg, meta}]
+      {:ok, msg}             -> [{msg, %{}}]
+      _                      -> []
     end
   end
 
   defp fill_slots_from_nlu(ctx, node, nlu_result) do
-    filled =
-      node.slots
-      |> Enum.reduce(ctx.slots, fn slot, acc ->
-        if Map.has_key?(acc, slot.name) do
-          acc
-        else
-          value = NLU.get_entity(nlu_result, slot.entity || to_string(slot.name))
+    raw_text = String.trim(nlu_result.text)
 
-          if value do
-            Map.put(acc, slot.name, value)
-          else
-            acc
+    {filled, errors} =
+      node.slots
+      |> Enum.reduce({ctx.slots, %{}}, fn slot, {slots_acc, errors_acc} ->
+        if Map.has_key?(slots_acc, slot.name) do
+          {slots_acc, errors_acc}
+        else
+          candidate =
+            if slot.entity do
+              NLU.get_entity(nlu_result, slot.entity) ||
+                if raw_text != "", do: raw_text, else: nil
+            else
+              if raw_text != "", do: raw_text, else: nil
+            end
+
+          case {candidate, slot.validator} do
+            {nil, _} ->
+              {slots_acc, errors_acc}
+
+            {value, nil} ->
+              {Map.put(slots_acc, slot.name, value), errors_acc}
+
+            {value, validator} ->
+              case Nuvoqs.OliviaEngine.Flow.Actions.validate(validator, value) do
+                {:ok, canonical} ->
+                  {Map.put(slots_acc, slot.name, canonical), errors_acc}
+
+                {:ok, canonical, extra} ->
+                  merged = slots_acc |> Map.put(slot.name, canonical) |> Map.merge(extra)
+                  {merged, errors_acc}
+
+                {:error, msg} ->
+                  {slots_acc, Map.put(errors_acc, slot.name, msg)}
+              end
           end
         end
       end)
 
-    %{ctx | slots: filled}
+    {%{ctx | slots: filled}, errors}
   end
 
   defp has_unfilled_required_slots?(node, filled_slots) do
@@ -161,8 +192,8 @@ defmodule Nuvoqs.OliviaEngine.Flow.Engine do
     |> Enum.filter(& &1.required)
     |> Enum.find(fn slot -> not Map.has_key?(filled_slots, slot.name) end)
     |> case do
-      nil -> "Please continue."
-      slot -> slot.prompt || "Please provide #{slot.name}."
+      nil -> "Continue..."
+      slot -> slot.prompt || "Por favor, informe #{slot.name}."
     end
   end
 
@@ -177,7 +208,14 @@ defmodule Nuvoqs.OliviaEngine.Flow.Engine do
 
     case transition do
       nil ->
-        {:ok, ctx, ["I didn't understand. Could you try again?"]}
+        case resolve_flow_from_intent(nlu_result) do
+          {:ok, new_flow_name} when new_flow_name != flow.name ->
+            start_flow(reset_context(ctx), new_flow_name)
+
+          _ ->
+            suggestions = IntentPhrases.suggestions_for_context(ctx.metadata[:chat_context])
+            {:ok, ctx, [{"Não entendi. Pode tentar de outra forma?", %{suggestions: suggestions}}]}
+        end
 
       %{target: target} ->
         enter_node(ctx, flow, target)

@@ -1,0 +1,325 @@
+# BumblebeeNLU — Teste standalone
+
+```elixir
+Mix.install([
+  {:bumblebee, "~> 0.6"},
+  {:nx, "~> 0.10"},
+  {:exla, "~> 0.10"},
+  {:axon, "~> 0.7"}
+], system_env: %{
+  "EXLA_CPU_ONLY" => "true",
+  "CFLAGS" => "-Wno-error -Wno-invalid-specialization",
+  "CXXFLAGS" => "-Wno-error -Wno-invalid-specialization"
+})
+```
+
+## Section
+
+Notebook completamente autônomo: instala só os deps de ML, sobe os servings
+e testa o parse sem precisar do app Phoenix rodando.
+
+> **Primeira execução:** o download dos modelos (~500 MB) pode demorar alguns minutos.
+
+## 1. Instalar dependências
+
+```elixir
+Nx.global_default_backend(EXLA.Backend)
+Nx.Defn.global_default_options(compiler: EXLA)
+```
+
+```elixir
+{:ok, model} = Bumblebee.load_model(
+  {:hf, "pierreguillou/ner-bert-large-cased-pt-lenerbr"}
+)
+
+{:ok, tokenizer} = Bumblebee.load_tokenizer(
+  {:hf, "pierreguillou/ner-bert-large-cased-pt-lenerbr"}
+)
+
+serving_ner_pt = Bumblebee.Text.token_classification(model, tokenizer,
+  aggregation: :same,
+  compile: [batch_size: 1, sequence_length: 512],
+  defn_options: [compiler: EXLA]
+)
+```
+
+## 2. Subir os servings (embedding + NER)
+
+```elixir
+defmodule Servings do
+  @intent_serving NLUTest.IntentServing
+  @ner_serving    NLUTest.NERServing
+
+  def start do
+    start_intent()
+    start_ner()
+    :ok
+  end
+
+  defp start_intent do
+    repo = "intfloat/multilingual-e5-base"
+    IO.puts("Carregando modelo de embedding: #{repo} ...")
+    {:ok, model}     = Bumblebee.load_model({:hf, repo})
+    {:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, repo})
+
+    serving =
+      Bumblebee.Text.text_embedding(model, tokenizer,
+        compile: [batch_size: 16, sequence_length: 128],
+        defn_options: [compiler: EXLA],
+        output_pool: :mean_pooling,
+        output_attribute: :hidden_state
+      )
+
+    {:ok, _} =
+      Nx.Serving.start_link(serving: serving, name: @intent_serving,
+                            batch_size: 16, batch_timeout: 50)
+
+    IO.puts("✅ Embedding pronto.")
+  end
+
+  defp start_ner do
+    IO.puts("Carregando modelo NER ...")
+    # {:ok, model}     = Bumblebee.load_model({:hf, "dslim/bert-base-NER"})
+    # {:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "google-bert/bert-base-cased"})
+
+    {:ok, model} = Bumblebee.load_model({:hf, "pierreguillou/ner-bert-large-cased-pt-lenerbr"})
+    {:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, "pierreguillou/ner-bert-large-cased-pt-lenerbr"})
+
+    
+    # serving =
+    #   Bumblebee.Text.token_classification(model, tokenizer,
+    #     aggregation: :same,
+    #     compile: [batch_size: 4, sequence_length: 128],
+    #     defn_options: [compiler: EXLA]
+    #   )
+
+    serving = 
+      Bumblebee.Text.token_classification(model, tokenizer,
+        aggregation: :same,
+        compile: [batch_size: 1, sequence_length: 512],
+        defn_options: [compiler: EXLA]
+      )
+
+    
+    {:ok, _} =
+      Nx.Serving.start_link(serving: serving, name: @ner_serving,
+                            batch_size: 1, batch_timeout: 100)
+
+    IO.puts("✅ NER pronto.")
+  end
+end
+
+Servings.start()
+```
+
+```elixir
+texto = "O senador collor, do PSD de Minas Gerais, votou pela aprovação da PEC 45/2019 no Senado Federal."
+Nx.Serving.batched_run(NLUTest.NERServing, texto)
+```
+
+## 3. Definir o NLU inline
+
+```elixir
+defmodule NLU do
+  @intent_serving NLUTest.IntentServing
+  @ner_serving    NLUTest.NERServing
+
+  # ── Frases de referência por contexto ──────────────────────────────────
+
+  @senate_phrases [
+    {"consultar_senador",
+     ["passage: quero ver informações senador", 
+       "passage: quem é o senador",
+      "passage: dados do parlamentar", 
+       "passage: dados do senador", 
+       "passage: fale sobre", 
+       "passage: falar",
+       "passage: consultar"]},
+    
+    {"seguir_senador",
+     [
+       "passage: acompanhar o senador", 
+       "passage: seguir parlamentar",
+       "passage: seguir senadores",
+       "passage: receber alertas sobre senador",
+       "passage: seguir",
+       "passage: acompanhar",
+       "passage: acompanhar",
+       "passage: monitorar senador"]},
+
+    {"ver_votacoes",
+     ["passage: como o senador votou", "passage: votações do senado",
+      "passage: resultado da votação", "passage: histórico de votos"]},
+    {"politic_br_senate_list",
+     ["passage: lista de senadores", "passage: quais são os senadores",
+      "passage: mostrar todos os senadores"]},
+    {"confirm",
+     ["passage: sim confirmo está correto", "passage: pode ser concordo"]},
+    {"deny",
+     ["passage: não está errado não quero", "passage: no that is wrong"]},
+    {"greet",
+     ["passage: olá bom dia como vai", "passage: oi hello hi"]},
+    {"goodbye",
+     ["passage: tchau até logo encerrar", "passage: goodbye bye"]}
+  ]
+
+  @general_phrases [
+    {"confirm",
+     ["passage: sim confirmo está correto", "passage: pode ser concordo"]},
+    {"deny",
+     ["passage: não está errado não quero"]},
+    {"cancel",
+     ["passage: cancelar operação desistir", "passage: cancel abort"]},
+    {"greet",
+     ["passage: olá bom dia como vai", "passage: oi hello hi"]},
+    {"goodbye",
+     ["passage: tchau até logo encerrar", "passage: goodbye bye"]}
+  ]
+
+  # ── API pública ─────────────────────────────────────────────────────────
+
+  def parse(text, context \\ nil) do
+    threshold = 0.5
+
+    with {:ok, intents}  <- classify_intent(text, threshold, context),
+         {:ok, entities} <- extract_entities(text, threshold) do
+      {:ok, %{text: text, intents: intents, entities: entities}}
+    end
+  end
+
+  def top_intent(%{intents: []}), do: nil
+  def top_intent(%{intents: intents}), do: intents |> Enum.max_by(& &1.confidence) |> Map.get(:name)
+
+  def get_entity(%{entities: entities}, role) do
+    case Enum.find(entities, &(&1.role == role or &1.name == role)) do
+      nil    -> nil
+      entity -> entity.value
+    end
+  end
+
+  # ── Intent via cosine similarity ────────────────────────────────────────
+
+  defp classify_intent(text, threshold, context) do
+    phrases = if context == "politic_br_senate", do: @senate_phrases, else: @general_phrases
+    query   = "query: #{text}"
+    %{embedding: user_emb} = Nx.Serving.batched_run(@intent_serving, query)
+
+    scored =
+      Enum.map(phrases, fn {name, refs} ->
+        max_score =
+          refs
+          |> Enum.map(fn ref ->
+            %{embedding: ref_emb} = Nx.Serving.batched_run(@intent_serving, ref)
+            cosine(user_emb, ref_emb)
+          end)
+          |> Enum.max()
+
+        %{name: name, confidence: max_score}
+      end)
+
+    top = Enum.max_by(scored, & &1.confidence)
+    intents = if top.confidence >= threshold, do: [top], else: []
+    {:ok, intents}
+  end
+
+  defp cosine(a, b) do
+    Nx.dot(l2(a), l2(b)) |> Nx.to_number()
+  end
+
+  defp l2(t), do: Nx.divide(t, Nx.LinAlg.norm(t))
+
+  # ── NER ─────────────────────────────────────────────────────────────────
+
+  defp extract_entities(text, threshold) do
+    result = Nx.Serving.batched_run(@ner_serving, text)
+
+    entities =
+      result.entities
+      |> Enum.filter(&(&1.score >= threshold))
+      |> Enum.map(fn e ->
+        role = ner_to_role(e.label)
+        %{name: e.label, role: role, value: e.phrase, confidence: e.score, body: e.phrase}
+      end)
+
+    {:ok, entities}
+  end
+
+  defp ner_to_role("PER"),  do: "wit$contact"
+  defp ner_to_role("LOC"),  do: "wit$location"
+  defp ner_to_role("ORG"),  do: "wit$organization"
+  defp ner_to_role("DATE"), do: "wit$datetime"
+  defp ner_to_role("TIME"), do: "wit$datetime"
+  defp ner_to_role(l),      do: String.downcase(l)
+end
+
+IO.puts("✅ Módulo NLU carregado.")
+```
+
+## 4. Testar intents — contexto politic_br_senate
+
+```elixir
+casos = [
+  # {"greet",                  "olá, bom dia!"},
+  # {"politic_br_senate_list", "quais são os senadores?"},
+  # {"politic_br_senate_list", "me mostra a lista de senadores"},
+  {"consultar_senador",      "quero ver informações do senador Romário"},
+  # {"consultar_senador",      "me fala sobre Renan Calheiros"},
+  # {"ver_votacoes",           "como o senador votou na última sessão?"},
+  # {"seguir_senador",         "quero acompanhar o senador Flávio Bolsonaro"},
+  # {"goodbye",                "tchau, até mais"},
+  # {"deny",                   "não quero isso"}
+]
+
+IO.puts(String.pad_trailing("ESPERADO", 26) <>
+        String.pad_trailing("DETECTADO", 26) <>
+        String.pad_trailing("CONF%", 8) <>
+        "FRASE")
+IO.puts(String.duplicate("─", 90))
+
+for {esperado, texto} <- casos do
+  {:ok, result} = NLU.parse(texto, "politic_br_senate")
+  intent = NLU.top_intent(result)
+  conf   = result.intents |> List.first(%{confidence: 0.0}) |> Map.get(:confidence)
+  ok?    = if intent == esperado, do: "✅", else: "⚠️ "
+
+  IO.puts(
+    "#{ok?} " <>
+    String.pad_trailing(esperado, 24) <>
+    String.pad_trailing(intent || "(none)", 26) <>
+    String.pad_trailing("#{Float.round(conf * 100, 1)}%", 8) <>
+    texto
+  )
+end
+```
+
+## 5. Testar extração de entidades (NER)
+
+```elixir
+frases_ner = [
+  "quero acompanhar o senador Romário",
+  "como votou Flávio Bolsonaro",
+  "informações sobre Renan Calheiros",
+  "Simone Tebet votou a favor?",
+  "lista de senadores",
+  "cancelar"
+]
+
+IO.puts(String.pad_trailing("FRASE", 45) <> "ENTIDADE (wit\$contact)")
+IO.puts(String.duplicate("─", 70))
+
+for texto <- frases_ner do
+  {:ok, result} = NLU.parse(texto, "politic_br_senate")
+  # entidade = NLU.get_entity(result, "wit$contact")
+  IO.puts(String.pad_trailing(texto, 45) <> inspect(result))
+end
+```
+
+## 6. Inspecionar resultado completo
+
+```elixir
+texto = "quero acompanhar o senador Romário"
+
+{:ok, result} = NLU.parse(texto, "politic_br_senate")
+
+IO.inspect(result, label: "Resultado completo", pretty: true)
+```

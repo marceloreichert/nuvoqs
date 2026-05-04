@@ -34,11 +34,11 @@ defmodule Nuvoqs.OliviaEngine.Session do
   end
 
   @doc "Send a user message to a session and get bot responses."
-  @spec send_message(String.t(), String.t()) :: {:ok, [String.t()]} | {:error, term()}
-  def send_message(session_id, text) do
+  @spec send_message(String.t(), String.t(), String.t() | nil) :: {:ok, [String.t()]} | {:error, term()}
+  def send_message(session_id, text, context \\ nil) do
     case ensure_session(session_id) do
       {:ok, _pid} ->
-        GenServer.call(via(session_id), {:message, text}, 15_000)
+        GenServer.call(via(session_id), {:message, text, context}, 60_000)
 
       {:error, reason} ->
         {:error, reason}
@@ -55,11 +55,11 @@ defmodule Nuvoqs.OliviaEngine.Session do
   end
 
   @doc "Manually start a specific flow in a session."
-  @spec start_flow(String.t(), String.t()) :: {:ok, [String.t()]} | {:error, term()}
-  def start_flow(session_id, flow_name) do
+  @spec start_flow(String.t(), String.t(), String.t() | nil) :: {:ok, [String.t()]} | {:error, term()}
+  def start_flow(session_id, flow_name, context \\ nil) do
     case ensure_session(session_id) do
       {:ok, _pid} ->
-        GenServer.call(via(session_id), {:start_flow, flow_name})
+        GenServer.call(via(session_id), {:start_flow, flow_name, context}, 60_000)
 
       {:error, reason} ->
         {:error, reason}
@@ -82,9 +82,11 @@ defmodule Nuvoqs.OliviaEngine.Session do
     Logger.info("Session started: #{session_id}")
     now = DateTime.utc_now()
 
+    context = Engine.new_context() |> Map.put(:metadata, %{user_id: session_id})
+
     state = %__MODULE__{
       session_id: session_id,
-      context: Engine.new_context(),
+      context: context,
       created_at: now,
       last_active_at: now,
       message_count: 0
@@ -94,12 +96,14 @@ defmodule Nuvoqs.OliviaEngine.Session do
   end
 
   @impl true
-  def handle_call({:message, text}, _from, state) do
-    case NLU.parse(text) do
+  def handle_call({:message, text, context}, _from, state) do
+    ctx = put_in(state.context, [:metadata, :chat_context], context)
+
+    case NLU.parse(text, context) do
       {:ok, nlu_result} ->
         Logger.info("NLU parse succeeded for session #{state.session_id}: #{inspect(nlu_result)}")
         # 2. Process through flow engine
-        case Engine.process_message(state.context, nlu_result) do
+        case Engine.process_message(ctx, nlu_result) do
           {:ok, new_ctx, responses} ->
             state = %{
               state
@@ -117,14 +121,19 @@ defmodule Nuvoqs.OliviaEngine.Session do
       {:error, reason} ->
         Logger.error("NLU parse failed for session #{state.session_id}: #{inspect(reason)}")
 
-        {:reply, {:ok, ["Sorry, I'm having trouble understanding right now. Please try again."]},
-         state, @timeout_ms}
+        {:reply, {:ok, [{"Tive um problema ao processar sua mensagem. Tente novamente.", %{}}]},
+         %{state | context: ctx}, @timeout_ms}
     end
   end
 
   @impl true
-  def handle_call({:start_flow, flow_name}, _from, state) do
-    case Engine.start_flow(state.context, flow_name) do
+  def handle_call({:start_flow, flow_name, context}, _from, state) do
+    ctx =
+      if context,
+        do: put_in(state.context, [:metadata, :chat_context], context),
+        else: state.context
+
+    case Engine.start_flow(ctx, flow_name) do
       {:ok, new_ctx, responses} ->
         state = %{state | context: new_ctx, last_active_at: DateTime.utc_now()}
         {:reply, {:ok, responses}, state, @timeout_ms}

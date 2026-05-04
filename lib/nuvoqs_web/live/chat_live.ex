@@ -4,6 +4,7 @@ defmodule NuvoqsWeb.ChatLive do
 
   alias Nuvoqs.Chat
   alias NuvoqsWeb.Layouts
+  alias Nuvoqs.OliviaEngine.NLU.IntentPhrases
 
   @topic "chat:general"
 
@@ -26,23 +27,40 @@ defmodule NuvoqsWeb.ChatLive do
         --teal-accent: #2dd4bf;
       }
 
-      body {
+      html, body {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
         background: var(--surface);
         color: var(--text-primary);
         font-family: 'Sora', sans-serif;
-        overflow: hidden;
+      }
+
+      [data-phx-main] {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .chat-page {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
       }
 
       .chat-wrapper {
         display: flex;
         flex-direction: column;
-        height: calc(100vh - 73px);
+        flex: 1;
+        min-height: 0;
       }
+
       .chat-layout {
         display: flex;
         flex-direction: column;
         flex: 1;
-        overflow: hidden;
+        min-height: 0;
       }
 
       .chat-header {
@@ -322,8 +340,55 @@ defmodule NuvoqsWeb.ChatLive do
         padding: 4px 0 2px;
         opacity: 0.5;
       }
+
+      .msg-suggestions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .suggestion-btn {
+        background: rgba(217, 119, 6, 0.12);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+        border-radius: 20px;
+        color: var(--orange-light);
+        font-size: 0.8rem;
+        padding: 5px 12px;
+        cursor: pointer;
+        font-family: 'Sora', sans-serif;
+        transition: background 0.2s, border-color 0.2s;
+      }
+
+      .suggestion-btn:hover {
+        background: rgba(217, 119, 6, 0.25);
+        border-color: rgba(245, 158, 11, 0.6);
+      }
+
+      .chat-help-btn {
+        background: transparent;
+        border: 1px solid rgba(245, 158, 11, 0.35);
+        border-radius: 20px;
+        color: var(--text-muted);
+        font-size: 0.78rem;
+        padding: 6px 14px;
+        cursor: pointer;
+        font-family: 'Sora', sans-serif;
+        white-space: nowrap;
+        transition: color 0.2s, border-color 0.2s, background 0.2s;
+        align-self: flex-end;
+        margin-bottom: 2px;
+        flex-shrink: 0;
+      }
+
+      .chat-help-btn:hover {
+        color: var(--orange-light);
+        border-color: rgba(245, 158, 11, 0.7);
+        background: rgba(217, 119, 6, 0.08);
+      }
     </style>
 
+    <div class="chat-page">
     <Layouts.main_nav current_scope={@current_scope} />
 
     <div class="chat-wrapper">
@@ -359,7 +424,26 @@ defmodule NuvoqsWeb.ChatLive do
               >
                 {if is_nil(msg.sender_id), do: "Olivia", else: msg.sender.email}
               </div>
-              <div class="msg-bubble">{msg.content}</div>
+              <div class="msg-bubble">
+                <img
+                  :if={Map.get(msg, :image_url)}
+                  src={msg.image_url}
+                  style={"border-radius: 50%; object-fit: cover; display: block; border: 2px solid rgba(245,158,11,0.3); #{if msg.content == "", do: "width: 96px; height: 96px;", else: "width: 72px; height: 72px; margin-bottom: 8px;"}"}
+                />
+                {msg.content}
+              </div>
+              <div :if={Map.get(msg, :suggestions, []) != []} class="msg-suggestions">
+                <button
+                  :for={{label, flow} <- Map.get(msg, :suggestions, [])}
+                  class="suggestion-btn"
+                  phx-click="suggest"
+                  phx-value-text={label}
+                  phx-value-flow={flow}
+                  type="button"
+                >
+                  {label}
+                </button>
+              </div>
               <div class="msg-meta">
                 {Calendar.strftime(msg.inserted_at, "%H:%M")}
               </div>
@@ -369,14 +453,21 @@ defmodule NuvoqsWeb.ChatLive do
       </div>
 
       <div class="chat-input-area">
-        <form class="chat-input-form" phx-submit="send" phx-change="typing">
+        <form class="chat-input-form" phx-submit="send">
+          <button
+            :if={@context_suggestions != []}
+            type="button"
+            class="chat-help-btn"
+            phx-click="help"
+          >
+            Preciso de ajuda!
+          </button>
           <div class="chat-input-wrap">
             <textarea
               name="content"
               class="chat-input"
-              placeholder="Digite uma mensagem... (use @olivia para falar com a IA)"
+              placeholder="Digite uma mensagem..."
               rows="1"
-              value={@content}
               phx-hook="AutoResize"
               id="chat-input"
             ></textarea>
@@ -388,6 +479,7 @@ defmodule NuvoqsWeb.ChatLive do
           </button>
         </form>
       </div>
+    </div>
     </div>
     </div>
     """
@@ -409,13 +501,15 @@ defmodule NuvoqsWeb.ChatLive do
 
     user = socket.assigns.current_scope.user
     messages = Chat.list_messages()
-    context = Map.get(@contexts, params["context"])
+    context_key = params["context"]
+    context = Map.get(@contexts, context_key)
 
     {:ok,
      socket
      |> assign(:current_user_id, user.id)
-     |> assign(:content, "")
      |> assign(:chat_context, context)
+     |> assign(:chat_context_key, context_key)
+     |> assign(:context_suggestions, IntentPhrases.suggestions_for_context(context_key))
      |> assign(:messages_empty, messages == [])
      |> stream(:messages, messages)}
   end
@@ -431,8 +525,8 @@ defmodule NuvoqsWeb.ChatLive do
            }) do
         {:ok, message} ->
           Phoenix.PubSub.broadcast(Nuvoqs.PubSub, @topic, {:new_message, message})
-          maybe_invoke_olivia(content, socket.assigns.current_user_id)
-          {:noreply, assign(socket, :content, "")}
+          maybe_invoke_olivia(content, socket.assigns.current_user_id, socket.assigns.chat_context_key)
+          {:noreply, socket}
 
         {:error, _changeset} ->
           {:noreply, socket}
@@ -442,8 +536,33 @@ defmodule NuvoqsWeb.ChatLive do
     end
   end
 
-  def handle_event("typing", %{"content" => content}, socket) do
-    {:noreply, assign(socket, :content, content)}
+  @impl true
+  def handle_event("help", _params, socket) do
+    suggestions = socket.assigns.context_suggestions
+
+    if suggestions != [] do
+      msg = Chat.bot_message("Como posso ajudar? Escolha uma opção:", suggestions: suggestions)
+      Phoenix.PubSub.broadcast(Nuvoqs.PubSub, @topic, {:new_message, msg})
+    end
+
+    {:noreply, socket}
+  end
+
+  @impl true
+  def handle_event("suggest", %{"text" => text, "flow" => flow_name}, socket) do
+    if text != "" do
+      case Chat.create_message(%{content: text, sender_id: socket.assigns.current_user_id}) do
+        {:ok, message} ->
+          Phoenix.PubSub.broadcast(Nuvoqs.PubSub, @topic, {:new_message, message})
+          invoke_olivia_flow(flow_name, socket.assigns.current_user_id, socket.assigns.chat_context_key)
+          {:noreply, socket}
+
+        {:error, _} ->
+          {:noreply, socket}
+      end
+    else
+      {:noreply, socket}
+    end
   end
 
   @impl true
@@ -454,33 +573,49 @@ defmodule NuvoqsWeb.ChatLive do
      |> stream_insert(:messages, message)}
   end
 
-  def handle_info({:bot_message, message}, socket) do
-    {:noreply,
-     socket
-     |> assign(:messages_empty, false)
-     |> stream_insert(:messages, message)}
+  def handle_info({:bot_messages, messages}, socket) do
+    Enum.each(messages, fn msg ->
+      Phoenix.PubSub.broadcast(Nuvoqs.PubSub, @topic, {:new_message, msg})
+    end)
+
+    {:noreply, socket}
   end
 
-  defp maybe_invoke_olivia(content, user_id) do
-    if String.match?(content, ~r/^@olivia\s+/i) do
-      query = Regex.replace(~r/^@olivia\s+/i, content, "")
-      session_id = to_string(user_id)
-      topic = @topic
+  defp invoke_olivia_flow(flow_name, user_id, context) do
+    session_id = to_string(user_id)
+    topic = @topic
 
-      Task.start(fn ->
-        case Nuvoqs.OliviaEngine.Session.send_message(session_id, query) do
-          {:ok, responses} ->
-            Logger.info("Received responses: #{inspect(responses)}")
+    Task.start(fn ->
+      case Nuvoqs.OliviaEngine.Session.start_flow(session_id, flow_name, context) do
+        {:ok, responses} ->
+          Enum.each(responses, fn {text, meta} ->
+            msg = Chat.bot_message(text, image_url: meta[:image_url], suggestions: meta[:suggestions] || [])
+            Phoenix.PubSub.broadcast(Nuvoqs.PubSub, topic, {:new_message, msg})
+          end)
 
-            Enum.each(responses, fn response ->
-              bot_msg = Chat.bot_message(response)
-              Phoenix.PubSub.broadcast(Nuvoqs.PubSub, topic, {:bot_message, bot_msg})
-            end)
+        _ ->
+          :ok
+      end
+    end)
+  end
 
-          _ ->
-            :ok
-        end
-      end)
-    end
+  defp maybe_invoke_olivia(content, user_id, context) do
+    session_id = to_string(user_id)
+    topic = @topic
+
+    Task.start(fn ->
+      case Nuvoqs.OliviaEngine.Session.send_message(session_id, content, context) do
+        {:ok, responses} ->
+          Logger.info("Received responses: #{inspect(responses)}")
+
+          Enum.each(responses, fn {text, meta} ->
+            msg = Chat.bot_message(text, image_url: meta[:image_url], suggestions: meta[:suggestions] || [])
+            Phoenix.PubSub.broadcast(Nuvoqs.PubSub, topic, {:new_message, msg})
+          end)
+
+        _ ->
+          :ok
+      end
+    end)
   end
 end

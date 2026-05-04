@@ -35,7 +35,20 @@ const ScrollBottom = {
 };
 
 const AutoResize = {
-  mounted() { this.resize() },
+  mounted() {
+    this.resize();
+    this.el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        const form = this.el.closest("form");
+        if (form) {
+          form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+          this.el.value = "";
+          this.resize();
+        }
+      }
+    });
+  },
   updated() { this.resize() },
   resize() {
     this.el.style.height = "auto";

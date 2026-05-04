@@ -27,13 +27,13 @@ defmodule Nuvoqs.OliviaEngine.NLU do
           traits: map()
         }
 
-  @callback parse(String.t()) :: {:ok, nlu_result()} | {:error, term()}
+  @callback parse(String.t(), String.t() | nil) :: {:ok, nlu_result()} | {:error, term()}
   @callback top_intent(nlu_result()) :: String.t() | nil
   @callback get_entity(nlu_result(), String.t()) :: any() | nil
 
   @doc "Parse a message using the configured provider."
-  @spec parse(String.t()) :: {:ok, nlu_result()} | {:error, term()}
-  def parse(text), do: provider().parse(text)
+  @spec parse(String.t(), String.t() | nil) :: {:ok, nlu_result()} | {:error, term()}
+  def parse(text, context \\ nil), do: provider().parse(text, context)
 
   @doc "Get top intent from a parsed result."
   @spec top_intent(nlu_result()) :: String.t() | nil

@@ -76,12 +76,12 @@ defmodule Nuvoqs.OliviaEngine.NLU.BumblebeeNLU do
         traits: %{}
       }}
   """
-  @spec parse(String.t()) :: {:ok, t()} | {:error, term()}
-  def parse(text) when is_binary(text) do
-    Logger.info("Parsing text: #{inspect(text)}")
+  @spec parse(String.t(), String.t() | nil) :: {:ok, t()} | {:error, term()}
+  def parse(text, context \\ nil) when is_binary(text) do
+    Logger.info("Parsing text: #{inspect(text)} [context: #{inspect(context)}]")
     threshold = config(:confidence_threshold, 0.5)
 
-    with {:ok, intents} <- classify_intent(text, threshold),
+    with {:ok, intents} <- classify_intent(text, threshold, context),
          {:ok, entities} <- extract_entities(text, threshold) do
       result = %__MODULE__{
         text: text,
@@ -168,18 +168,16 @@ defmodule Nuvoqs.OliviaEngine.NLU.BumblebeeNLU do
 
   # ── Private: Intent via cosine similarity ─────────────────────────────
 
-  defp classify_intent(text, threshold) do
+  defp classify_intent(text, threshold, context) do
     query = "query: #{text}"
     %{embedding: user_emb} = Nx.Serving.batched_run(@intent_serving, query)
 
     all_scored =
-      Enum.map(IntentPhrases.all(), fn {intent_name, phrases} ->
+      Enum.map(IntentPhrases.for_context(context), fn {intent_name, phrases} ->
         max_score =
           phrases
-          |> Enum.map(fn phrase ->
-            %{embedding: phrase_emb} = Nx.Serving.batched_run(@intent_serving, phrase)
-            cosine_similarity(user_emb, phrase_emb)
-          end)
+          |> Enum.map(&cached_phrase_embedding/1)
+          |> Enum.map(&cosine_similarity(user_emb, &1))
           |> Enum.max()
 
         %{name: intent_name, confidence: max_score}
@@ -188,6 +186,20 @@ defmodule Nuvoqs.OliviaEngine.NLU.BumblebeeNLU do
     top = Enum.max_by(all_scored, & &1.confidence)
     intents = if top.confidence >= threshold, do: [top], else: []
     {:ok, intents}
+  end
+
+  defp cached_phrase_embedding(phrase) do
+    key = {:phrase_emb, phrase}
+
+    case :persistent_term.get(key, nil) do
+      nil ->
+        %{embedding: emb} = Nx.Serving.batched_run(@intent_serving, phrase)
+        :persistent_term.put(key, emb)
+        emb
+
+      emb ->
+        emb
+    end
   end
 
   defp cosine_similarity(a, b) do

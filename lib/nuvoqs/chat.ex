@@ -23,14 +23,16 @@ defmodule Nuvoqs.Chat do
     end
   end
 
-  def bot_message(content, room \\ "general") do
+  def bot_message(content, opts \\ []) do
     %{
       id: Ecto.UUID.generate(),
       content: content,
-      room: room,
+      room: Keyword.get(opts, :room, "general"),
       sender_id: nil,
       sender: %{email: "olivia@nuvoqs.ai"},
       inserted_at: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
+      image_url: Keyword.get(opts, :image_url),
+      suggestions: Keyword.get(opts, :suggestions, []),
       bot: true
     }
   end
