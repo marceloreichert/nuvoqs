@@ -29,9 +29,8 @@ defmodule Nuvoqs.Application do
       Nuvoqs.OliviaEngine.Flow.Registry,
       # Actions registry (GenServer, stores action handlers)
       Nuvoqs.OliviaEngine.Flow.Actions,
-      # Bumblebee NLU: embedding (intent) + NER models
+      # Bumblebee NLU: embedding model for intent classification
       Nuvoqs.OliviaEngine.NLU.BumblebeeNLU.intent_serving_spec(),
-      Nuvoqs.OliviaEngine.NLU.BumblebeeNLU.ner_serving_spec(),
       NuvoqsWeb.Endpoint
     ]
 

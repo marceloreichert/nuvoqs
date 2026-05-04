@@ -56,7 +56,6 @@ defmodule Nuvoqs.OliviaEngine.NLU.BumblebeeNLU do
   # ── Nx.Serving names (registered in Application supervisor) ──
 
   @intent_serving Nuvoqs.OliviaEngine.NLU.IntentServing
-  @ner_serving Nuvoqs.OliviaEngine.NLU.NERServing
 
   # ── Public API ──
 
@@ -81,12 +80,11 @@ defmodule Nuvoqs.OliviaEngine.NLU.BumblebeeNLU do
     Logger.info("Parsing text: #{inspect(text)} [context: #{inspect(context)}]")
     threshold = config(:confidence_threshold, 0.5)
 
-    with {:ok, intents} <- classify_intent(text, threshold, context),
-         {:ok, entities} <- extract_entities(text, threshold) do
+    with {:ok, intents} <- classify_intent(text, threshold, context) do
       result = %__MODULE__{
         text: text,
         intents: intents,
-        entities: entities,
+        entities: [],
         traits: %{}
       }
 
@@ -142,28 +140,6 @@ defmodule Nuvoqs.OliviaEngine.NLU.BumblebeeNLU do
     {Nx.Serving, serving: serving, name: @intent_serving, batch_size: 16, batch_timeout: 50}
   end
 
-  @doc """
-  Builds the NER Nx.Serving.
-  Add this to your supervision tree.
-  """
-  @spec ner_serving_spec() :: {Nx.Serving, keyword()}
-  def ner_serving_spec do
-    ner_model_repo = config(:ner_model, "dslim/bert-base-NER")
-    ner_tokenizer_repo = config(:ner_tokenizer, "google-bert/bert-base-cased")
-
-    {:ok, model} = Bumblebee.load_model({:hf, ner_model_repo})
-    {:ok, tokenizer} = Bumblebee.load_tokenizer({:hf, ner_tokenizer_repo})
-
-    serving =
-      Bumblebee.Text.token_classification(model, tokenizer,
-        aggregation: :same,
-        compile: [batch_size: 4, sequence_length: 128],
-        defn_options: [compiler: EXLA]
-      )
-
-    {Nx.Serving, serving: serving, name: @ner_serving, batch_size: 4, batch_timeout: 100}
-  end
-
   alias Nuvoqs.OliviaEngine.NLU.IntentPhrases
 
   # ── Private: Intent via cosine similarity ─────────────────────────────
@@ -202,6 +178,8 @@ defmodule Nuvoqs.OliviaEngine.NLU.BumblebeeNLU do
     end
   end
 
+  # ── Private: Cosine similarity ────────────────────────────────────────
+
   defp cosine_similarity(a, b) do
     a = l2_normalize(a)
     b = l2_normalize(b)
@@ -210,66 +188,6 @@ defmodule Nuvoqs.OliviaEngine.NLU.BumblebeeNLU do
 
   defp l2_normalize(tensor) do
     Nx.divide(tensor, Nx.LinAlg.norm(tensor))
-  end
-
-  # ── Private: Entity Extraction ──
-
-  defp extract_entities(text, threshold) do
-    result = Nx.Serving.batched_run(@ner_serving, text)
-
-    ner_entities =
-      result.entities
-      |> Enum.filter(&(&1.score >= threshold))
-      |> Enum.map(fn e ->
-        %{
-          name: e.label,
-          role: map_ner_label_to_role(e.label),
-          value: e.phrase,
-          confidence: e.score,
-          body: e.phrase
-        }
-      end)
-
-    {:ok, ner_entities ++ extract_datetime_entities(text)}
-  end
-
-  # Maps dslim NER labels to wit$-compatible roles so existing flow
-  # slot definitions (entity: "wit$location", etc.) work unchanged.
-  defp map_ner_label_to_role("LOC"), do: "wit$location"
-  defp map_ner_label_to_role("PER"), do: "wit$contact"
-  defp map_ner_label_to_role("ORG"), do: "wit$organization"
-  defp map_ner_label_to_role("MISC"), do: "misc"
-  defp map_ner_label_to_role("DATE"), do: "wit$datetime"
-  defp map_ner_label_to_role("TIME"), do: "wit$datetime"
-  defp map_ner_label_to_role("CARDINAL"), do: "wit$number"
-  defp map_ner_label_to_role(label), do: String.downcase(label)
-
-  # ── Datetime extraction ──────────────────────────────────────────────
-  # BERT NER doesn't extract dates. This regex covers common PT-BR / EN
-  # patterns so the date slot in flows like book_flight keeps working.
-
-  # \b falha com unicode (ã, ç) — usa âncoras de espaço
-  @date_patterns [
-    ~r/(?:^|\s)(hoje|amanhã|depois de amanhã)(?:\s|$)/iu,
-    ~r/(?:^|\s)(segunda|terça|quarta|quinta|sexta|sábado|domingo)(?:-feira)?(?:\s|$)/iu,
-    ~r/(?:^|\s)(próxim[ao]\s+\S+(?:-feira)?)(?:\s|$)/iu,
-    ~r/\b(\d{1,2}[\/\-]\d{1,2}(?:[\/\-]\d{2,4})?)\b/,
-    ~r/\b(\d{1,2}\s+de\s+\w+(?:\s+de\s+\d{4})?)\b/i,
-    ~r/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?\b/i,
-    ~r/\b(tomorrow|today|next\s+\w+|this\s+\w+)\b/i
-  ]
-
-  defp extract_datetime_entities(text) do
-    Enum.find_value(@date_patterns, [], fn pattern ->
-      case Regex.run(pattern, text, capture: :all_but_first) do
-        [match | _] ->
-          value = String.trim(match)
-          [%{name: "wit$datetime", role: "wit$datetime", value: value, confidence: 0.8, body: value}]
-
-        _ ->
-          nil
-      end
-    end) || []
   end
 
   # ── Config helper ──
