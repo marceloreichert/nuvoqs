@@ -72,7 +72,6 @@ defmodule Nuvoqs.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:timex, "~> 3.7"},
-      {:httpoison, "~> 2.3"},
       {:bumblebee, "~> 0.6"},
       {:nx, "~> 0.10"},
       {:exla, "~> 0.10"},
